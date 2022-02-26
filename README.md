@@ -1,12 +1,10 @@
 # Extended match
 
-This library is meant to extend abilities provided by ExUnit.Assertions
-in regards to complex type matching, e.g. DateTime or Decimal.
+This library is meant to extend abilities provided by `ExUnit.Assertions` in regards to complex type matching, for example `DateTime` or `Decimal`.
 
 ## Installation
 
-If [available in Hex](https://hex.pm/docs/publish), the package can be installed
-by adding `exmatch` to your list of dependencies in `mix.exs`:
+The package can be installed by adding `exmatch` to your list of dependencies in `mix.exs`:
 
 ```elixir
 def deps do
