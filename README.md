@@ -1,6 +1,7 @@
 # Extended match
 
-This library is meant to extend abilities provided by `ExUnit.Assertions` in regards to complex type matching, for example `DateTime` or `Decimal`.
+This library is meant to provide an ergonomic way to match,
+compare and bind data in complex types such as maps and structs.
 
 ## Installation
 
@@ -14,7 +15,5 @@ def deps do
 end
 ```
 
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/exmatch>.
+## Usage
 
