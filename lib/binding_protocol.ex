@@ -26,44 +26,6 @@ defimpl ExMatch.BindingProtocol, for: Any do
     end
   end
 
-  # def diff(value, value, _), do: []
-
-  # def diff(left = %struct{}, right = %struct{}, opts) do
-  #   fields = Map.get(opts, struct, [])
-  #   drop = Enum.filter(fields, &is_atom(&1))
-
-  #   merge =
-  #     Enum.reduce(fields, %{}, fn
-  #       {key, value}, map -> Map.put(map, key, value)
-  #       _, map -> map
-  #     end)
-
-  #   case ExMatch.Protocol.Map.diff(
-  #          left |> Map.from_struct() |> Map.drop(drop) |> Map.merge(merge),
-  #          right |> Map.from_struct() |> Map.drop(drop),
-  #          opts
-  #        ) do
-  #     nil ->
-  #       []
-
-  #     {left_map, right_map} ->
-  #       {
-  #         Map.put(left_map, :__struct__, struct),
-  #         Map.put(right_map, :__struct__, struct)
-  #       }
-  #   end
-  # end
-
-  # def diff(left, right = %_{}, opts) do
-  #   case ExMatch.Protocol.diff(right, left, opts) do
-  #     nil -> []
-  #     {right_result, left_result} -> {left_result, right_result}
-  #   end
-  # end
-
-  # def diff(left, right, _),
-  #   do: {escape(left), right}
-
   def escape(self),
     do: Macro.escape(self)
 
@@ -148,26 +110,78 @@ end
 defmodule ExMatch.Var do
   @moduledoc false
 
-  defstruct [:ast]
+  defstruct [:binding, :expr, :expr_fun]
 
-  def parse({var, _, nil} = ast) when is_atom(var) do
+  def parse({var, _, nil} = binding) when is_atom(var) do
     self =
       quote do
-        %ExMatch.Var{ast: unquote(Macro.escape(ast))}
+        %ExMatch.Var{
+          binding: unquote(Macro.escape(binding))
+        }
       end
 
-    {[ast], self}
+    case var do
+      :_ -> {[], self}
+      _ -> {[binding], self}
+    end
+  end
+
+  def parse({:when, _, [{var, meta, nil} = binding, expr]}) when is_atom(var) do
+    self =
+      quote do
+        %ExMatch.Var{
+          binding: unquote(Macro.escape(binding)),
+          expr: unquote(Macro.escape(expr)),
+          expr_fun: fn unquote(binding) -> unquote(expr) end
+        }
+      end
+
+    {[{var, [generated: true] ++ meta, nil}], self}
   end
 
   defimpl ExMatch.BindingProtocol do
     @moduledoc false
 
-    def diff(_left, right, _opts) do
-      [right]
+    def diff(%ExMatch.Var{binding: binding, expr: nil, expr_fun: nil}, right, _opts) do
+      case binding do
+        {:_, _, nil} -> []
+        _ -> [right]
+      end
     end
 
-    def escape(%ExMatch.Var{ast: ast}),
-      do: ast
+    def diff(%ExMatch.Var{binding: binding, expr: expr, expr_fun: expr_fun}, right, _opts) do
+      expr_fun.(right)
+    catch
+      class, error ->
+        ast =
+          quote do
+            unquote(binding) = unquote(Macro.escape(right))
+            when unquote(expr) = unquote(class)(unquote(error))
+          end
+
+        {ast, right}
+    else
+      falsy when falsy in [nil, false] ->
+        ast =
+          quote do
+            unquote(binding) = unquote(Macro.escape(right))
+            when unquote(expr) = unquote(Macro.escape(falsy))
+          end
+
+        {ast, right}
+
+      _truthy ->
+        [right]
+    end
+
+    def escape(%ExMatch.Var{binding: binding, expr: nil}),
+      do: binding
+
+    def escape(%ExMatch.Var{binding: binding, expr: expr}) do
+      quote do
+        unquote(binding) when unquote(expr)
+      end
+    end
 
     def value(_self),
       do: raise(ArgumentError, "Bindings don't represent values")
@@ -179,8 +193,8 @@ defmodule ExMatch.List do
 
   defstruct [:items]
 
-  def parse(list, parse_ast) do
-    {bindings, parsed} = parse_items(list, [], [], parse_ast)
+  def parse(list, parse_ast, opts) do
+    {bindings, parsed} = parse_items(list, [], [], parse_ast, opts)
 
     self =
       quote do
@@ -190,29 +204,34 @@ defmodule ExMatch.List do
     {bindings, self}
   end
 
-  def parse_items([item | list], bindings, parsed, parse_ast) do
-    {item_bindings, item_parsed} = parse_ast.(item)
+  def parse_items([item | list], bindings, parsed, parse_ast, opts) do
+    {item_bindings, item_parsed} = parse_ast.(item, opts)
     bindings = item_bindings ++ bindings
     parsed = [item_parsed | parsed]
-    parse_items(list, bindings, parsed, parse_ast)
+    parse_items(list, bindings, parsed, parse_ast, opts)
   end
 
-  def parse_items([], bindings, parsed, _) do
+  def parse_items([], bindings, parsed, _parse_ast, _opts) do
     {bindings, Enum.reverse(parsed)}
   end
 
-  def diff([item | items], bindings, left_diffs, right_diffs, right, opts) do
+  def diff(items, right, opts) do
+    diff(items, 0, [], [], [], right, opts)
+  end
+
+  defp diff([item | items], skipped, bindings, left_diffs, right_diffs, right, opts) do
     case right do
       [right_item | right] ->
         case ExMatch.BindingProtocol.diff(item, right_item, opts) do
           new_bindings when is_list(new_bindings) ->
             bindings = new_bindings ++ bindings
-            diff(items, bindings, left_diffs, right_diffs, right, opts)
+            diff(items, skipped + 1, bindings, left_diffs, right_diffs, right, opts)
 
           {left_diff, right_diff} ->
-            left_diffs = [left_diff | left_diffs]
-            right_diffs = [right_diff | right_diffs]
-            diff(items, bindings, left_diffs, right_diffs, right, opts)
+            skipped = ExMatch.Skipped.list(skipped)
+            left_diffs = [left_diff | skipped ++ left_diffs]
+            right_diffs = [right_diff | skipped ++ right_diffs]
+            diff(items, 0, bindings, left_diffs, right_diffs, right, opts)
         end
 
       [] ->
@@ -221,9 +240,12 @@ defmodule ExMatch.List do
     end
   end
 
-  def diff([], bindings, [], [], _right, _opts), do: bindings
+  defp diff([], _skipped, bindings, [], [], [], _opts), do: bindings
 
-  def diff([], _bindings, left_diffs, right_diffs, right, _opts) do
+  defp diff([], skipped, _bindings, left_diffs, right_diffs, right, _opts) do
+    skipped = ExMatch.Skipped.list(skipped)
+    left_diffs = skipped ++ left_diffs
+    right_diffs = skipped ++ right_diffs
     {Enum.reverse(left_diffs), Enum.reverse(right_diffs, right)}
   end
 
@@ -240,7 +262,7 @@ defmodule ExMatch.List do
 
     def diff(left, right, opts) when is_list(right) do
       %ExMatch.List{items: items} = left
-      ExMatch.List.diff(items, [], [], [], right, opts)
+      ExMatch.List.diff(items, right, opts)
     end
 
     def diff(left, right, _) do
@@ -260,11 +282,11 @@ defmodule ExMatch.Tuple do
 
   defstruct [:items]
 
-  def parse({:{}, _, items}, parse_ast), do: parse_items(items, parse_ast)
-  def parse({item1, item2}, parse_ast), do: parse_items([item1, item2], parse_ast)
+  def parse({:{}, _, items}, parse_ast, opts), do: parse_items(items, parse_ast, opts)
+  def parse({item1, item2}, parse_ast, opts), do: parse_items([item1, item2], parse_ast, opts)
 
-  defp parse_items(items, parse_ast) do
-    {bindings, parsed} = ExMatch.List.parse_items(items, [], [], parse_ast)
+  defp parse_items(items, parse_ast, opts) do
+    {bindings, parsed} = ExMatch.List.parse_items(items, [], [], parse_ast, opts)
 
     self =
       quote do
@@ -280,7 +302,7 @@ defmodule ExMatch.Tuple do
     def diff(left, right, opts) when is_tuple(right) do
       %ExMatch.Tuple{items: items} = left
 
-      case ExMatch.List.diff(items, [], [], [], Tuple.to_list(right), opts) do
+      case ExMatch.List.diff(items, Tuple.to_list(right), opts) do
         {left_diffs, right_diffs} ->
           right_diffs = List.to_tuple(right_diffs)
           {{:{}, [], left_diffs}, right_diffs}
@@ -314,8 +336,8 @@ defmodule ExMatch.Map do
   @enforce_keys [:partial, :fields]
   defstruct @enforce_keys
 
-  def parse({:%{}, _, fields}, parse_ast) do
-    {partial, bindings, parsed} = parse_fields(fields, parse_ast)
+  def parse({:%{}, _, fields}, parse_ast, opts) do
+    {partial, bindings, parsed} = parse_fields(fields, parse_ast, opts)
 
     self =
       quote do
@@ -328,22 +350,25 @@ defmodule ExMatch.Map do
     {bindings, self}
   end
 
-  def parse_fields(fields, parse_ast) do
-    {partial, bindings, parsed, _parse_ast} =
-      Enum.reduce(fields, {false, [], [], parse_ast}, &parse_field/2)
+  def parse_fields(fields, parse_ast, opts) do
+    {partial, bindings, parsed} =
+      Enum.reduce(fields, {false, [], []}, fn
+        item, {partial, binding, parsed} ->
+          parse_field(item, partial, binding, parsed, parse_ast, opts)
+      end)
 
     {partial, bindings, Enum.reverse(parsed)}
   end
 
-  defp parse_field({:..., _, nil}, {_partial, bindings, parsed, parse_ast}) do
-    {true, bindings, parsed, parse_ast}
+  defp parse_field({:..., _, nil}, _partial, bindings, parsed, _parse_ast, _opts) do
+    {true, bindings, parsed}
   end
 
-  defp parse_field({key, value}, {partial, bindings, parsed, parse_ast}) do
-    {value_bindings, value_parsed} = parse_ast.(value)
+  defp parse_field({key, value}, partial, bindings, parsed, parse_ast, opts) do
+    {value_bindings, value_parsed} = parse_ast.(value, opts)
     parsed = [{key, value_parsed} | parsed]
     bindings = value_bindings ++ bindings
-    {partial, bindings, parsed, parse_ast}
+    {partial, bindings, parsed}
   end
 
   def diff_items(fields, right, opts) do
@@ -495,24 +520,41 @@ defmodule ExMatch.Struct do
 
   def parse(
         {:%, _, [module, {:%{}, _, fields}]},
-        parse_ast
+        parse_ast,
+        opts
       )
       when is_list(fields) do
-    {partial, bindings, parsed} = ExMatch.Map.parse_fields(fields, parse_ast)
+    {partial, bindings, parsed} = ExMatch.Map.parse_fields(fields, parse_ast, opts)
 
     self =
       quote do
         ExMatch.Struct.new(
           unquote(module),
           unquote(parsed),
-          unquote(partial)
+          unquote(partial),
+          unquote(opts)
         )
       end
 
     {bindings, self}
   end
 
-  def new(module, fields, partial) do
+  def new(module, fields, partial, opts) do
+    {partial, fields} =
+      case Map.get(opts, module) do
+        nil ->
+          {partial, fields}
+
+        %ExMatch.Map{} = opts ->
+          partial = opts.partial || partial
+          fields = Keyword.merge(opts.fields, fields)
+          {partial, fields}
+      end
+
+    new(module, fields, partial)
+  end
+
+  defp new(module, fields, partial) do
     if partial do
       raise ArgumentError
     end

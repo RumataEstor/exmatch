@@ -1,55 +1,7 @@
-defmodule ExMatchTest.Dummy do
-  defstruct [:a, :b, :c]
-
-  def id(value), do: value
-end
-
-defmodule ExMatchTest.Dummy1 do
-  defstruct [:a, :b, :c]
-end
-
 defmodule ExMatchTest do
-  use ExUnit.Case
-
-  require ExMatch
+  use ExMatchTest.TestCase
 
   doctest ExMatch
-
-  defmacrop sigil_m({:<<>>, _, [string]}, []) do
-    decimal =
-      string
-      |> String.replace("_", "")
-      |> Decimal.new()
-      |> Macro.escape()
-
-    quote do
-      unquote(decimal)
-    end
-  end
-
-  defmacrop match_fails(expr, expected_message) do
-    quote do
-      result =
-        try do
-          unquote(expr)
-          :ok
-        rescue
-          error in ExUnit.AssertionError ->
-            error
-        end
-
-      if result == :ok do
-        raise ExUnit.AssertionError, "expected to raise but returned successfully"
-      end
-
-      result_message =
-        result
-        |> Exception.message()
-        |> String.replace_leading("\n\nmatch failed\n", "")
-
-      assert unquote(expected_message) == result_message
-    end
-  end
 
   test "basic types" do
     ExMatch.match(1, 1)
@@ -95,6 +47,21 @@ defmodule ExMatchTest do
     assert 1 == v
   end
 
+  test "var with condition" do
+    ExMatch.match(a when not is_nil(a), 1)
+    assert 1 == a
+
+    match_fails(
+      ExMatch.match(b when b + a == 0, 1),
+      """
+      left:  b = 1 when b + a == 0 = false
+      right: 1
+      """
+    )
+
+    ExMatch.match(%{a: _x, b: y when a < y}, %{b: 2, a: 1})
+  end
+
   test "list" do
     ExMatch.match([], [])
     ExMatch.match([1], [1])
@@ -107,8 +74,8 @@ defmodule ExMatchTest do
     match_fails(
       ExMatch.match([1, 2, 4], [1, 2, 3]),
       """
-      left:  [4]
-      right: [3]
+      left:  [..2.., 4]
+      right: [..2.., 3]
       """
     )
 
@@ -117,6 +84,14 @@ defmodule ExMatchTest do
       """
       left:  [1, 2, 4]
       right: [2, 4]
+      """
+    )
+
+    match_fails(
+      ExMatch.match([1, 2], [1, 2, 3, 4]),
+      """
+      left:  [..2..]
+      right: [..2.., 3, 4]
       """
     )
   end
@@ -133,8 +108,8 @@ defmodule ExMatchTest do
     match_fails(
       ExMatch.match({1, 2, 4}, {1, 2, 3}),
       """
-      left:  {4}
-      right: {3}
+      left:  {..2.., 4}
+      right: {..2.., 3}
       """
     )
 
@@ -149,8 +124,23 @@ defmodule ExMatchTest do
     match_fails(
       ExMatch.match({1, {2, 3}, 4}, {1, 2, 4}),
       """
-      left:  {{2, 3}}
-      right: {2}
+      left:  {.., {2, 3}, ..}
+      right: {.., 2, ..}
+      """
+    )
+
+    match_fails(
+    ExMatch.match({_, 2}, {1, 2, 3, 4}),
+    """
+    left:  {..2..}
+    right: {..2.., 3, 4}
+    """)
+
+    match_fails(
+      ExMatch.match({1, 2}, {1, 2, 3, 4}),
+      """
+      left:  {..2..}
+      right: {..2.., 3, 4}
       """
     )
   end
@@ -211,7 +201,7 @@ defmodule ExMatchTest do
     )
   end
 
-  test "Struct" do
+  test "struct" do
     alias ExMatchTest.Dummy
     ten = 10
 
@@ -221,6 +211,8 @@ defmodule ExMatchTest do
     ExMatch.match(%Dummy{..., a: 1, b: b}, struct)
     assert b == {1, 2, 3, 4}
 
+    ExMatch.match(%Dummy{a: ten - 9, b: {_, 2, _, 4}, c: ten - 0}, struct)
+
     match_fails(
       ExMatch.match(%ExMatchTest.Dummy1{a: 1, b: ^b}, struct),
       """
@@ -228,6 +220,24 @@ defmodule ExMatchTest do
       right: %{__struct__: ExMatchTest.Dummy, c: 10}
       """
     )
+  end
+
+  @opts ExMatch.options(%{
+    ExMatchTest.Dummy1 => %{b: {1, _, _, ExMatchTest.Dummy.id(3 + 1)}}
+  })
+
+  test "struct with options" do
+    alias ExMatchTest.Dummy
+
+    one = 1
+
+    struct = %Dummy{a: 1, b: {1, 2, 3, 4}, c: 10}
+
+    ExMatch.match(%Dummy{c: id(1) + 9, b: {_, 2, _, 4}}, struct, %{
+      Dummy => %{a: ^one}
+    })
+
+    ExMatch.match(%ExMatchTest.Dummy1{..., a: id(1)}, struct, @opts)
   end
 
   test "DateTime" do

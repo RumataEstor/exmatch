@@ -7,6 +7,8 @@ defmodule Exmatch.MixProject do
       description: description(),
       version: "0.1.0",
       elixir: "~> 1.13",
+      elixirc_options: [warnings_as_errors: true],
+      elixirc_paths: ["lib"] ++ if(Mix.env() == :test, do: ["test/support"], else: []),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
       package: package()
