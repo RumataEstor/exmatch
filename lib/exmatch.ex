@@ -12,11 +12,11 @@ defmodule ExMatch do
   iex> 2 = a
   """
   defmacro match(left, right) do
-    do_match(left, right, quote(do: %{}))
+    do_match(left, right, quote(do: %ExMatch.Options{opts: %{}}))
   end
 
   defmacro match(left, right, opts) do
-    do_match(left, right, opts)
+    do_match(left, right, options_(opts))
   end
 
   defmacro options(item) do
@@ -24,28 +24,22 @@ defmodule ExMatch do
   end
 
   defp options_(item) do
-    case item do
-      {:@, _, [{name, _, context}]} when is_atom(name) and is_atom(context) ->
-        item
-
-      {:%{}, meta, opts_fields} ->
-        opts_fields =
-          Enum.map(opts_fields, fn {struct, struct_opts} ->
-            {[], map} = parse_ast(struct_opts, %{})
-            {struct, map}
-          end)
-
-        {:%{}, meta, opts_fields}
-    end
+    ExMatch.Options.parse(item, &parse_ast/2)
   end
 
   defp do_match(left, right, opts) do
     opts_var = Macro.var(:opts, __MODULE__)
     {bindings, left} = parse_ast(left, opts_var)
-    opts = options_(opts)
 
     quote do
-      unquote(opts_var) = unquote(opts)
+      unquote(opts_var) =
+        case unquote(opts) do
+          %ExMatch.Options{opts: opts} ->
+            opts
+
+          other ->
+            raise "The 3rd opts argument must be built using ExMatch.options/1"
+        end
 
       unquote(bindings) =
         case BindingProtocol.diff(unquote(left), unquote(right), %{}) do

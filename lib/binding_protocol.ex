@@ -589,15 +589,12 @@ defmodule ExMatch.Struct do
 
     case ExMatch.BindingProtocol.ExMatch.Map.diff(map, right_map, opts) do
       {left_diff, right_diff} ->
-        right_diff = Map.put(right_diff, :__struct__, rstruct)
+        make_diff(module, fields, partial, right, left_diff, right_diff)
 
-        try do
-          _ = inspect(right_diff, safe: false)
-          {{:%, [], [module, left_diff]}, right_diff}
-        rescue
-          _ ->
-            {escape(module, fields, partial), right}
-        end
+      _ when module != rstruct ->
+        left_diff = []
+        right_diff = %{}
+        make_diff(module, fields, partial, right, left_diff, right_diff)
 
       bindings ->
         bindings
@@ -606,6 +603,18 @@ defmodule ExMatch.Struct do
 
   def diff(module, fields, partial, right, _opts) do
     {escape(module, fields, partial), right}
+  end
+
+  defp make_diff(module, fields, partial, %rstruct{} = right, left_diff, right_diff) do
+    right_diff = Map.put(right_diff, :__struct__, rstruct)
+
+    try do
+      _ = inspect(right_diff, safe: false)
+      {{:%, [], [module, left_diff]}, right_diff}
+    rescue
+      _ ->
+        {escape(module, fields, partial), right}
+    end
   end
 
   def escape(module, fields, partial) do

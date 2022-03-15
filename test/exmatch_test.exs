@@ -130,11 +130,12 @@ defmodule ExMatchTest do
     )
 
     match_fails(
-    ExMatch.match({_, 2}, {1, 2, 3, 4}),
-    """
-    left:  {..2..}
-    right: {..2.., 3, 4}
-    """)
+      ExMatch.match({_, 2}, {1, 2, 3, 4}),
+      """
+      left:  {..2..}
+      right: {..2.., 3, 4}
+      """
+    )
 
     match_fails(
       ExMatch.match({1, 2}, {1, 2, 3, 4}),
@@ -156,6 +157,14 @@ defmodule ExMatchTest do
     ExMatch.match(%{..., b: ExMatchTest.Dummy.id(two), c: b, d: %{..., f: a}}, map)
     assert a == 12
     assert b == 3
+
+    match_fails(
+      ExMatch.match(%{b: ^two}, map),
+      """
+      left:  %{}
+      right: %{a: 1, c: 3, d: %{e: 11, f: 12}}
+      """
+    )
 
     match_fails(
       ExMatch.match(^map, 1),
@@ -223,8 +232,16 @@ defmodule ExMatchTest do
   end
 
   @opts ExMatch.options(%{
-    ExMatchTest.Dummy1 => %{b: {1, _, _, ExMatchTest.Dummy.id(3 + 1)}}
-  })
+          ExMatchTest.Dummy => %{b: {1, _, _, ExMatchTest.Dummy.id(3 + 1)}}
+        })
+
+  defp opts1(), do: @opts
+
+  defp opts2(),
+    do:
+      ExMatch.options(%{
+        ExMatchTest.Dummy1 => %{c: 4}
+      })
 
   test "struct with options" do
     alias ExMatchTest.Dummy
@@ -237,7 +254,28 @@ defmodule ExMatchTest do
       Dummy => %{a: ^one}
     })
 
-    ExMatch.match(%ExMatchTest.Dummy1{..., a: id(1)}, struct, @opts)
+    ExMatch.match(%ExMatchTest.Dummy{..., a: id(1)}, struct, @opts)
+
+    ExMatch.match(%Dummy{a: 1, c: 10}, struct, opts1())
+
+    ExMatch.match(%ExMatchTest.Dummy1{}, %ExMatchTest.Dummy1{c: 4}, opts2())
+
+    match_fails(
+      ExMatch.match(%Dummy{}, struct!(ExMatchTest.Dummy1, Map.from_struct(struct)), opts1()),
+      """
+      left:  %ExMatchTest.Dummy{}
+      right: %{__struct__: ExMatchTest.Dummy1, a: 1, c: 10}
+      """
+    )
+  end
+
+  test "options errors" do
+    assert_raise(RuntimeError, "options must be a map or an expression returning a map", fn ->
+      quote do
+        ExMatch.match(%Dummy{}, struct, [])
+      end
+      |> Code.eval_quoted([], __ENV__)
+    end)
   end
 
   test "DateTime" do
