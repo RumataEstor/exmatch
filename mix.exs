@@ -5,8 +5,8 @@ defmodule Exmatch.MixProject do
     do: [
       app: :exmatch,
       description: description(),
-      version: "0.2.0",
-      elixir: "~> 1.13",
+      version: "0.3.0",
+      elixir: "~> 1.12",
       elixirc_options: [warnings_as_errors: true],
       elixirc_paths: ["lib"] ++ if(Mix.env() == :test, do: ["test/support"], else: []),
       start_permanent: Mix.env() == :prod,
