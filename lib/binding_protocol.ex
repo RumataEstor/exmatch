@@ -89,11 +89,7 @@ defmodule ExMatch.Expr do
     end
 
     def escape(%ExMatch.Expr{ast: ast, value: value}) do
-      code =
-        ast
-        |> Code.quoted_to_algebra()
-        |> Inspect.Algebra.format(:infinity)
-        |> IO.iodata_to_binary()
+      code = Macro.to_string(ast)
 
       if code == inspect(value) do
         ast
