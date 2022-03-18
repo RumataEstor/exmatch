@@ -155,7 +155,7 @@ defimpl ExMatch.Protocol, for: DateTime do
     end
   end
 
-  def diff_dates(left, right, right_date) do
+  defp diff_dates(left, right, right_date) do
     case DateTime.compare(left, right_date) do
       :eq -> nil
       _ -> {left, right}
@@ -172,9 +172,6 @@ if Code.ensure_loaded?(Decimal) do
       Decimal.new(right)
       :eq = Decimal.compare(left, right)
       nil
-    rescue
-      _ ->
-        {left, right}
     end
   end
 end

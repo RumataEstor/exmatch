@@ -17,7 +17,12 @@ defimpl ExMatch.BindingProtocol, for: Any do
   @moduledoc false
 
   def diff(left, right, opts) do
-    case ExMatch.Protocol.diff(left, right, opts) do
+    try do
+      ExMatch.Protocol.diff(left, right, opts)
+    catch
+      _kind, _error ->
+        {escape(left), right}
+    else
       nil ->
         []
 
@@ -75,7 +80,12 @@ defmodule ExMatch.Expr do
     def diff(left, right, opts) do
       %ExMatch.Expr{ast: ast, value: value} = left
 
-      case ExMatch.Protocol.diff(value, right, opts) do
+      try do
+        ExMatch.Protocol.diff(value, right, opts)
+      catch
+        _kind, _error ->
+          {escape(left), right}
+      else
         {^value, right_diff} ->
           {escape(left), right_diff}
 
@@ -94,7 +104,7 @@ defmodule ExMatch.Expr do
       if code == inspect(value) do
         ast
       else
-        {:=, [], [ast, Macro.escape(value)]}
+        {:=, [], [ast, value]}
       end
     end
 
@@ -487,9 +497,12 @@ defmodule ExMatch.Struct do
       def diff(left, right, opts) do
         %WithValue{module: module, fields: fields, value: value} = left
 
-        case ExMatch.Protocol.diff(value, right, opts) do
-          nil -> []
-          {_, _} -> ExMatch.Struct.diff(module, fields, false, right, opts)
+        try do
+          nil = ExMatch.Protocol.diff(value, right, opts)
+          []
+        catch
+          _kind, _error ->
+            ExMatch.Struct.diff(module, fields, false, right, opts)
         end
       end
     end

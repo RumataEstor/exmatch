@@ -284,6 +284,14 @@ defmodule ExMatchTest do
     ExMatch.match("2022-02-19 14:55:08.387165+09:45", datetime)
     ExMatch.match("2022-02-19 05:10:08.387165Z", datetime)
     ExMatch.match(~U[2022-02-19 05:10:08.387165Z], datetime)
+
+    match_fails(
+      ExMatch.match(^datetime, nil),
+      """
+      left:  ^datetime = #DateTime<2022-02-19 14:55:08.387165+09:45 +09:45 Etc/UTC+9:45>
+      right: nil
+      """
+    )
   end
 
   test "Decimal" do
@@ -309,6 +317,14 @@ defmodule ExMatchTest do
       """
       left:  %Decimal{coef: ^eleven = 11, exp: 1 - 1 = 0, sign: 1}
       right: #Decimal<12>
+      """
+    )
+
+    match_fails(
+      ExMatch.match(~m(1.1), nil),
+      """
+      left:  ~m(1.1) = #Decimal<1.1>
+      right: nil
       """
     )
   end
