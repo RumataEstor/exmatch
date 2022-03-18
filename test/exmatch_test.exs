@@ -1,4 +1,6 @@
 defmodule ExMatchTest do
+  @external_resource "README.md"
+
   use ExMatchTest.TestCase
 
   doctest ExMatch
@@ -186,7 +188,7 @@ defmodule ExMatchTest do
       ExMatch.match(%{a: 1, c: 2}, map),
       """
       left:  %{c: 2}
-      right: %{b: 2, c: 3, d: %{e: 11, f: 12}}
+      right: %{c: 3, b: 2, d: %{e: 11, f: 12}}
       """
     )
 
@@ -204,8 +206,8 @@ defmodule ExMatchTest do
         map
       ),
       """
-      left:  %{x: _, y: 6, d: ExMatchTest.Dummy.id(eleven + two) = 13}
-      right: %{b: 2, d: %{e: 11, f: 12}}
+      left:  %{d: ExMatchTest.Dummy.id(eleven + two) = 13, x: _, y: 6}
+      right: %{d: %{e: 11, f: 12}, b: 2}
       """
     )
   end
@@ -226,7 +228,7 @@ defmodule ExMatchTest do
       ExMatch.match(%ExMatchTest.Dummy1{a: 1, b: ^b}, struct),
       """
       left:  %ExMatchTest.Dummy1{c: nil}
-      right: %{__struct__: ExMatchTest.Dummy, c: 10}
+      right: %ExMatchTest.Dummy{c: 10}
       """
     )
   end
@@ -267,7 +269,7 @@ defmodule ExMatchTest do
       ),
       """
       left:  %ExMatchTest.Dummy{c: %ExMatchTest.Dummy{a: _, b: 1}}
-      right: %{__struct__: ExMatchTest.Dummy, c: 10}
+      right: %ExMatchTest.Dummy{c: 10}
       """
     )
 
@@ -281,7 +283,7 @@ defmodule ExMatchTest do
       ExMatch.match(%Dummy{}, struct!(ExMatchTest.Dummy1, Map.from_struct(struct)), opts1()),
       """
       left:  %ExMatchTest.Dummy{}
-      right: %{__struct__: ExMatchTest.Dummy1, a: 1, c: 10}
+      right: %ExMatchTest.Dummy1{a: 1, c: 10}
       """
     )
   end
@@ -325,7 +327,7 @@ defmodule ExMatchTest do
       ExMatch.match(%Decimal{coef: 11, exp: -1, sign: 1}, ~m(11)),
       """
       left:  %Decimal{coef: 11, exp: -1, sign: 1}
-      right: #Decimal<11>
+      right: %Decimal{coef: 11, exp: 0, sign: 1}
       """
     )
 
@@ -333,7 +335,7 @@ defmodule ExMatchTest do
       ExMatch.match(%Decimal{coef: ^eleven, exp: 1 - 1, sign: 1}, Decimal.add(1, eleven)),
       """
       left:  %Decimal{coef: ^eleven = 11, exp: 1 - 1 = 0, sign: 1}
-      right: #Decimal<12>
+      right: %Decimal{coef: 12, exp: 0, sign: 1}
       """
     )
 

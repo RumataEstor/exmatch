@@ -1,6 +1,10 @@
 defmodule ExMatch do
+  @external_resource "README.md"
+
   @moduledoc """
-    Assertions for data equivalence.
+  Assertions for data equivalence.
+
+  #{"README.md" |> File.read!() |> String.split("<!-- EXAMPLES -->") |> Enum.at(1)}
   """
 
   alias ExMatch.BindingProtocol
@@ -47,12 +51,13 @@ defmodule ExMatch do
             raise ExUnit.AssertionError,
               left: diff_left,
               right: diff_right,
-              message: "match failed",
               context: {:match, []}
 
           bindings when is_list(bindings) ->
             bindings
         end
+
+      :ok
     end
   end
 

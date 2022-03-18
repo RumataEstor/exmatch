@@ -5,13 +5,14 @@ defmodule Exmatch.MixProject do
     do: [
       app: :exmatch,
       description: description(),
-      version: "0.5.0",
+      version: "0.6.0",
       elixir: "~> 1.10",
       elixirc_options: [warnings_as_errors: true],
-      elixirc_paths: ["lib"] ++ if(Mix.env() == :test, do: ["test/support"], else: []),
+      elixirc_paths: ["lib"] ++ if(Mix.env() in [:test, :dev], do: ["test/support"], else: []),
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      package: package()
+      package: package(),
+      docs: docs()
     ]
 
   def application,
@@ -24,6 +25,7 @@ defmodule Exmatch.MixProject do
 
   defp deps,
     do: [
+      {:ex_doc, "~> 0.27", only: :dev, runtime: false},
       {:decimal, "~> 2.0", only: [:dev, :test]},
       {:mix_test_watch, "~> 1.1", only: [:dev, :test]},
       {:timex, "~> 3.7", only: [:dev, :test]}
@@ -37,5 +39,14 @@ defmodule Exmatch.MixProject do
       links: %{
         GitHub: "https://github.com/RumataEstor/exmatch"
       }
+    ]
+
+  defp docs,
+    do: [
+      main: "readme",
+      extras: [
+        "README.md",
+        "LICENSE"
+      ]
     ]
 end
