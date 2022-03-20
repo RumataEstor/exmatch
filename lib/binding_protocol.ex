@@ -451,7 +451,7 @@ defmodule ExMatch.Map do
       {escape(left), right}
     end
 
-    def escape(%ExMatch.Map{fields: fields} = left) do
+    def escape(%ExMatch.Map{fields: fields}) do
       fields =
         Enum.map(fields, fn {key, value} ->
           {
@@ -460,15 +460,7 @@ defmodule ExMatch.Map do
           }
         end)
 
-      {:%{}, [], fields ++ and_partial_ast(left)}
-    end
-
-    defp and_partial_ast(%ExMatch.Map{partial: partial}) do
-      if partial do
-        [quote(do: ...)]
-      else
-        []
-      end
+      {:%{}, [], fields}
     end
 
     def value(%ExMatch.Map{partial: true}),
@@ -518,7 +510,7 @@ defmodule ExMatch.Struct do
         do: ExMatch.Struct.escape(module, fields, partial)
 
       def value(%NoValue{}),
-        do: raise("This struct doesn't have value")
+        do: raise(ArgumentError, "This struct doesn't have value")
 
       def diff(left, right, opts) do
         %NoValue{module: module, fields: fields, partial: partial} = left

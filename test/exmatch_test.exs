@@ -254,6 +254,23 @@ defmodule ExMatchTest do
       Dummy => %{a: ^one}
     })
 
+    match_fails(
+      ExMatch.match(
+        %Dummy{
+          c: %Dummy{..., b: 1},
+          b: {_, 2, _, 4}
+        },
+        struct,
+        %{
+          Dummy => %{..., a: _}
+        }
+      ),
+      """
+      left:  %ExMatchTest.Dummy{c: %ExMatchTest.Dummy{a: _, b: 1}}
+      right: %{__struct__: ExMatchTest.Dummy, c: 10}
+      """
+    )
+
     ExMatch.match(%ExMatchTest.Dummy{..., a: id(1)}, struct, @opts)
 
     ExMatch.match(%Dummy{a: 1, c: 10}, struct, opts1())
