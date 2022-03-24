@@ -14,7 +14,7 @@ The package can be installed by adding `exmatch` to your list of dependencies in
 ```elixir
 defp deps do
   [
-    {:exmatch, "~> 0.6.0", only: [:dev, :test]}
+    {:exmatch, "~> 0.7.0", only: [:dev, :test]}
   ]
 end
 ```
