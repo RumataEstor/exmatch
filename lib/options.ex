@@ -4,7 +4,7 @@ defmodule ExMatch.Options do
   def parse({:%{}, meta, opts_fields}, parse_ast) do
     opts_fields =
       Enum.map(opts_fields, fn {struct, struct_opts} ->
-        {[], map} = parse_ast.(struct_opts, %{})
+        {[], map} = parse_ast.(struct_opts, Macro.escape(%{}))
         {struct, map}
       end)
 

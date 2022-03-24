@@ -348,5 +348,29 @@ defmodule ExMatchTest do
     )
   end
 
+  test "deep nested options" do
+    ExMatch.match(%ExMatchTest.Dummy1{
+      b: %ExMatchTest.Dummy{
+        a: 2
+      }
+    },
+    %ExMatchTest.Dummy1{
+      b: %ExMatchTest.Dummy{
+        a: 2,
+        c: [%ExMatchTest.Dummy1{a: 1}]
+      },
+      c: 3
+    }, %{
+      ExMatchTest.Dummy => %{
+        c: [
+          %ExMatchTest.Dummy1{a: 1}
+        ]
+      },
+      ExMatchTest.Dummy1 => %{
+        c: 3
+      }
+    })
+  end
+
   defp id(value), do: value
 end

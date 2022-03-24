@@ -46,7 +46,7 @@ defmodule ExMatch do
         end
 
       unquote(bindings) =
-        case BindingProtocol.diff(unquote(left), unquote(right), %{}) do
+        case BindingProtocol.diff(unquote(left), unquote(right), unquote(opts_var)) do
           {diff_left, diff_right} = diff ->
             raise ExUnit.AssertionError,
               left: diff_left,
