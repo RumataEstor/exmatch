@@ -118,7 +118,7 @@ defmodule ExMatch.Var do
 
   defstruct [:binding, :expr, :expr_fun]
 
-  def parse({var, _, nil} = binding) when is_atom(var) do
+  def parse({var, _, context} = binding) when is_atom(var) and is_atom(context) do
     self =
       quote do
         %ExMatch.Var{
@@ -132,7 +132,8 @@ defmodule ExMatch.Var do
     end
   end
 
-  def parse({:when, _, [{var, meta, nil} = binding, expr]}) when is_atom(var) do
+  def parse({:when, _, [{var, meta, context} = binding, expr]})
+      when is_atom(var) and is_atom(context) do
     self =
       quote do
         %ExMatch.Var{
@@ -142,7 +143,7 @@ defmodule ExMatch.Var do
         }
       end
 
-    {[{var, [generated: true] ++ meta, nil}], self}
+    {[{var, [generated: true] ++ meta, context}], self}
   end
 
   defimpl ExMatch.BindingProtocol do

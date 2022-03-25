@@ -145,8 +145,10 @@ defimpl ExMatch.Protocol, for: DateTime do
     diff_dates(left, right, right)
   end
 
-  def diff(left, right, _) when is_binary(right) do
-    case DateTime.from_iso8601(right) do
+  def diff(left, right, opts) when is_binary(right) do
+    opts = opts[DateTime] || []
+
+    case :match_string in opts and DateTime.from_iso8601(right) do
       {:ok, right_date, _} ->
         diff_dates(left, right, right_date)
 

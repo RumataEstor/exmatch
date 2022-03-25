@@ -241,9 +241,9 @@ defmodule ExMatchTest do
 
   defp opts2(),
     do:
-      ExMatch.options(%{
-        ExMatchTest.Dummy1 => %{c: 4}
-      })
+      ExMatch.options([
+        %ExMatchTest.Dummy1{c: 4}
+      ])
 
   test "struct with options" do
     alias ExMatchTest.Dummy
@@ -289,9 +289,27 @@ defmodule ExMatchTest do
   end
 
   test "options errors" do
-    assert_raise(RuntimeError, "options must be a map or an expression returning a map", fn ->
+    assert_raise(RuntimeError, "Options argument must be a map or a list, got: {}", fn ->
       quote do
-        ExMatch.match(%Dummy{}, struct, [])
+        ExMatch.match(%Dummy{}, struct, {})
+      end
+      |> Code.eval_quoted([], __ENV__)
+    end)
+
+    assert_raise(
+      RuntimeError,
+      "Option item must be a structs or `{struct_module :: atom(), struct_opts :: term()}`, got: %{a: 1}",
+      fn ->
+        quote do
+          ExMatch.match(%Dummy{}, struct, [%{a: 1}])
+        end
+        |> Code.eval_quoted([], __ENV__)
+      end
+    )
+
+    assert_raise(RuntimeError, "Options cannot export variables, found [a] in struct Dummy", fn ->
+      quote do
+        ExMatch.match(%Dummy{}, struct, [%Dummy{a: a}])
       end
       |> Code.eval_quoted([], __ENV__)
     end)
@@ -300,9 +318,25 @@ defmodule ExMatchTest do
   test "DateTime" do
     # Timex keeps offsets in the DateTime unlike DateTime.parse
     datetime = Timex.parse!("2022-02-19 14:55:08.387165+09:45", "{ISO:Extended}")
-    ExMatch.match("2022-02-19 14:55:08.387165+09:45", datetime)
-    ExMatch.match("2022-02-19 05:10:08.387165Z", datetime)
+    ExMatch.match("2022-02-19 14:55:08.387165+09:45", datetime, [{DateTime, [:match_string]}])
+    ExMatch.match("2022-02-19 05:10:08.387165Z", datetime, [{DateTime, [:match_string]}])
     ExMatch.match(~U[2022-02-19 05:10:08.387165Z], datetime)
+
+    match_fails(
+      ExMatch.match("2022-02-19 14:55:08.387165+09:45", datetime),
+      """
+      left:  "2022-02-19 14:55:08.387165+09:45"
+      right: #DateTime<2022-02-19 14:55:08.387165+09:45 +09:45 Etc/UTC+9:45>
+      """
+    )
+
+    match_fails(
+      ExMatch.match("2022-02-19 05:10:08.387165Z", datetime),
+      """
+      left:  "2022-02-19 05:10:08.387165Z"
+      right: #DateTime<2022-02-19 14:55:08.387165+09:45 +09:45 Etc/UTC+9:45>
+      """
+    )
 
     match_fails(
       ExMatch.match(^datetime, nil),
@@ -349,27 +383,30 @@ defmodule ExMatchTest do
   end
 
   test "deep nested options" do
-    ExMatch.match(%ExMatchTest.Dummy1{
-      b: %ExMatchTest.Dummy{
-        a: 2
-      }
-    },
-    %ExMatchTest.Dummy1{
-      b: %ExMatchTest.Dummy{
-        a: 2,
-        c: [%ExMatchTest.Dummy1{a: 1}]
+    ExMatch.match(
+      %ExMatchTest.Dummy1{
+        b: %ExMatchTest.Dummy{
+          a: 2
+        }
       },
-      c: 3
-    }, %{
-      ExMatchTest.Dummy => %{
-        c: [
-          %ExMatchTest.Dummy1{a: 1}
-        ]
-      },
-      ExMatchTest.Dummy1 => %{
+      %ExMatchTest.Dummy1{
+        b: %ExMatchTest.Dummy{
+          a: 2,
+          c: [%ExMatchTest.Dummy1{a: 1}]
+        },
         c: 3
+      },
+      %{
+        ExMatchTest.Dummy => %{
+          c: [
+            %ExMatchTest.Dummy1{a: 1}
+          ]
+        },
+        ExMatchTest.Dummy1 => %{
+          c: 3
+        }
       }
-    })
+    )
   end
 
   defp id(value), do: value
