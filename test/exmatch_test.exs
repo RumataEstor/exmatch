@@ -349,13 +349,29 @@ defmodule ExMatchTest do
 
   test "Decimal" do
     eleven = 11
-    ExMatch.match(1, ~m(1.0))
-    ExMatch.match(Decimal.mult("0.5", 2), 1)
-    ExMatch.match(%{a: 1}, %{a: ~m(1.0)})
-    ExMatch.match(%{a: 1}, %{a: Decimal.add("0.8", "0.2")})
+    opts = ExMatch.options([{Decimal, [:match_integer, :match_string]}])
+    ExMatch.match(1, ~m(1.0), [{Decimal, [:match_integer]}])
+    ExMatch.match("1", ~m(1.0), [{Decimal, [:match_string]}])
+    ExMatch.match(Decimal.mult("0.5", 2), 1, opts)
+    ExMatch.match(%{a: 1}, %{a: ~m(1.0)}, opts)
+    ExMatch.match(%{a: 1}, %{a: Decimal.add("0.8", "0.2")}, opts)
     ExMatch.match(%Decimal{coef: 11, exp: -1, sign: 1}, ~m(1.1))
     ExMatch.match(%Decimal{..., coef: id(eleven)}, ~m(1.1))
     ExMatch.match(%Decimal{coef: 11, exp: 1 - 1, sign: 1}, Decimal.add(1, 10))
+
+    match_fails(
+      ExMatch.match(1, ~m(1.0), [{Decimal, :match_integer}]),
+      fn ex ->
+        assert ex =~ """
+        left:  1 =~
+          ** (Protocol.UndefinedError) protocol Enumerable not implemented for :match_integer of type Atom
+        """
+        assert ex =~ String.trim_trailing("""
+
+        right: #Decimal<1.0>
+        """)
+      end
+    )
 
     match_fails(
       ExMatch.match(%Decimal{coef: 11, exp: -1, sign: 1}, ~m(11)),

@@ -37,8 +37,13 @@ defmodule ExMatchTest.TestCase do
         raise ExUnit.AssertionError, "expected to raise but returned successfully"
       end
 
-      expected_message = String.trim_trailing(unquote(expected_message))
-      assert expected_message == Exception.message(result)
+      expected_message = unquote(expected_message)
+      if is_binary(expected_message) do
+        expected_message = String.trim_trailing(expected_message)
+        assert expected_message == Exception.message(result)
+      else
+        expected_message.(Exception.message(result))
+      end
     end
   end
 

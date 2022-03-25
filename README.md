@@ -36,7 +36,7 @@ iex> ExMatch.match(%{a: 1, b: 2, c: 3}, %{c: 3, a: 2, b: {1, 0}})
 left:  %{a: 1, b: 2}
 right: %{a: 2, b: {1, 0}}
 
-iex> ExMatch.match([10, eleven, _], [Decimal.new("10"), 11, 12])
+iex> ExMatch.match([10, eleven, _], [Decimal.new("10"), 11, 12], [{Decimal, [:match_integer]}])
 iex> eleven == 11
 true
 iex> ExMatch.match(%Decimal{coef: ^eleven, exp: 1 - 1, sign: 1}, Decimal.add(1, eleven))

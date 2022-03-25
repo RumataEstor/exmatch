@@ -17,18 +17,7 @@ defimpl ExMatch.BindingProtocol, for: Any do
   @moduledoc false
 
   def diff(left, right, opts) do
-    try do
-      ExMatch.Protocol.diff(left, right, opts)
-    catch
-      _kind, _error ->
-        {escape(left), right}
-    else
-      nil ->
-        []
-
-      {left_diff, right_diff} ->
-        {Macro.escape(left_diff), right_diff}
-    end
+    diff_values(left, right, opts)
   end
 
   def escape(self),
@@ -36,6 +25,38 @@ defimpl ExMatch.BindingProtocol, for: Any do
 
   def value(self),
     do: self
+
+  def diff_values(left, right, opts, on_diff \\ nil) do
+    get_opts = fn atom ->
+      try do
+        opts
+        |> Map.get(atom)
+        |> ExMatch.BindingProtocol.value()
+      rescue
+        ArgumentError ->
+          nil
+      end
+    end
+
+    try do
+      left_value = ExMatch.BindingProtocol.value(left)
+      ExMatch.Protocol.diff(left_value, right, get_opts)
+    catch
+      kind, error ->
+        left_ast = ExMatch.BindingProtocol.escape(left)
+        ex = ExMatch.Exception.new(kind, error, __STACKTRACE__)
+        {{:=~, [], [left_ast, ex]}, right}
+    else
+      nil ->
+        []
+
+      {left_diff, right_diff} when on_diff == nil ->
+        {Macro.escape(left_diff), right_diff}
+
+      diff ->
+        on_diff.(diff)
+    end
+  end
 end
 
 defmodule ExMatch.Expr do
@@ -80,22 +101,14 @@ defmodule ExMatch.Expr do
     def diff(left, right, opts) do
       %ExMatch.Expr{ast: ast, value: value} = left
 
-      try do
-        ExMatch.Protocol.diff(value, right, opts)
-      catch
-        _kind, _error ->
-          {escape(left), right}
-      else
+      ExMatch.BindingProtocol.Any.diff_values(value, right, opts, fn
         {^value, right_diff} ->
           {escape(left), right_diff}
 
         {left_diff, right_diff} ->
           left_diff = {:=~, [], [ast, Macro.escape(left_diff)]}
           {left_diff, right_diff}
-
-        nil ->
-          []
-      end
+      end)
     end
 
     def escape(%ExMatch.Expr{ast: ast, value: value}) do
@@ -490,13 +503,9 @@ defmodule ExMatch.Struct do
       def diff(left, right, opts) do
         %WithValue{module: module, fields: fields, value: value} = left
 
-        try do
-          nil = ExMatch.Protocol.diff(value, right, opts)
-          []
-        catch
-          _kind, _error ->
-            ExMatch.Struct.diff(module, fields, false, right, opts)
-        end
+        ExMatch.BindingProtocol.Any.diff_values(value, right, opts, fn _ ->
+          ExMatch.Struct.diff(module, fields, false, right, opts)
+        end)
       end
     end
   end
