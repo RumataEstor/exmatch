@@ -35,15 +35,24 @@ iex> ExMatch.match(%{a: 1, b: 2, c: 3}, %{c: 3, a: 2, b: {1, 0}})
 ** (ExUnit.AssertionError)
 left:  %{a: 1, b: 2}
 right: %{a: 2, b: {1, 0}}
+```
 
-iex> ExMatch.match([10, eleven, _], [Decimal.new("10"), 11, 12], [{Decimal, [:match_integer]}])
+```elixir
+iex> opts = ExMatch.options([{Decimal, [:match_integer]}])
+iex> ExMatch.match([10, eleven, _], [Decimal.new("10"), 11, 12], opts)
 iex> eleven == 11
 true
+```
+
+```elixir
+iex> eleven = 11
 iex> ExMatch.match(%Decimal{coef: ^eleven, exp: 1 - 1, sign: 1}, Decimal.add(1, eleven))
 ** (ExUnit.AssertionError)
 left:  %Decimal{coef: ^eleven = 11, exp: 1 - 1 = 0, sign: 1}
 right: %Decimal{coef: 12, exp: 0, sign: 1}
+```
 
+```elixir
 iex> alias ExMatchTest.{Dummy, Dummy1}
 iex> ExMatch.match(%Dummy{
 ...>    a: %Dummy1{a: 1},

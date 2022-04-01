@@ -38,6 +38,7 @@ defmodule ExMatchTest.TestCase do
       end
 
       expected_message = unquote(expected_message)
+
       if is_binary(expected_message) do
         expected_message = String.trim_trailing(expected_message)
         assert expected_message == Exception.message(result)

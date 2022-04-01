@@ -1,4 +1,4 @@
-defprotocol ExMatch.BindingProtocol do
+defprotocol ExMatch.Match do
   @moduledoc false
 
   @fallback_to_any true
@@ -13,7 +13,7 @@ defprotocol ExMatch.BindingProtocol do
   def value(self)
 end
 
-defimpl ExMatch.BindingProtocol, for: Any do
+defimpl ExMatch.Match, for: Any do
   @moduledoc false
 
   def diff(left, right, opts) do
@@ -31,7 +31,7 @@ defimpl ExMatch.BindingProtocol, for: Any do
       try do
         opts
         |> Map.get(atom)
-        |> ExMatch.BindingProtocol.value()
+        |> ExMatch.Match.value()
       rescue
         ArgumentError ->
           nil
@@ -39,11 +39,11 @@ defimpl ExMatch.BindingProtocol, for: Any do
     end
 
     try do
-      left_value = ExMatch.BindingProtocol.value(left)
-      ExMatch.Protocol.diff(left_value, right, get_opts)
+      left_value = ExMatch.Match.value(left)
+      ExMatch.Diff.diff(left_value, right, get_opts)
     catch
       kind, error ->
-        left_ast = ExMatch.BindingProtocol.escape(left)
+        left_ast = ExMatch.Match.escape(left)
         ex = ExMatch.Exception.new(kind, error, __STACKTRACE__)
         {{:=~, [], [left_ast, ex]}, right}
     else
@@ -95,13 +95,13 @@ defmodule ExMatch.Expr do
     {[], self}
   end
 
-  defimpl ExMatch.BindingProtocol do
+  defimpl ExMatch.Match do
     @moduledoc false
 
     def diff(left, right, opts) do
       %ExMatch.Expr{ast: ast, value: value} = left
 
-      ExMatch.BindingProtocol.Any.diff_values(value, right, opts, fn
+      ExMatch.Match.Any.diff_values(value, right, opts, fn
         {^value, right_diff} ->
           {escape(left), right_diff}
 
@@ -159,7 +159,7 @@ defmodule ExMatch.Var do
     {[{var, [generated: true] ++ meta, context}], self}
   end
 
-  defimpl ExMatch.BindingProtocol do
+  defimpl ExMatch.Match do
     @moduledoc false
 
     def diff(%ExMatch.Var{binding: binding, expr: nil, expr_fun: nil}, right, _opts) do
@@ -242,7 +242,7 @@ defmodule ExMatch.List do
   defp diff([item | items], skipped, bindings, left_diffs, right_diffs, right, opts) do
     case right do
       [right_item | right] ->
-        case ExMatch.BindingProtocol.diff(item, right_item, opts) do
+        case ExMatch.Match.diff(item, right_item, opts) do
           new_bindings when is_list(new_bindings) ->
             bindings = new_bindings ++ bindings
             diff(items, skipped + 1, bindings, left_diffs, right_diffs, right, opts)
@@ -270,14 +270,14 @@ defmodule ExMatch.List do
   end
 
   def escape_items(items) do
-    Enum.map(items, &ExMatch.BindingProtocol.escape/1)
+    Enum.map(items, &ExMatch.Match.escape/1)
   end
 
   def value(items) do
-    Enum.map(items, &ExMatch.BindingProtocol.value/1)
+    Enum.map(items, &ExMatch.Match.value/1)
   end
 
-  defimpl ExMatch.BindingProtocol do
+  defimpl ExMatch.Match do
     @moduledoc false
 
     def diff(left, right, opts) when is_list(right) do
@@ -316,7 +316,7 @@ defmodule ExMatch.Tuple do
     {bindings, self}
   end
 
-  defimpl ExMatch.BindingProtocol do
+  defimpl ExMatch.Match do
     @moduledoc false
 
     def diff(left, right, opts) when is_tuple(right) do
@@ -337,7 +337,7 @@ defmodule ExMatch.Tuple do
     end
 
     def escape(%ExMatch.Tuple{items: [i1, i2]}),
-      do: {ExMatch.BindingProtocol.escape(i1), ExMatch.BindingProtocol.escape(i2)}
+      do: {ExMatch.Match.escape(i1), ExMatch.Match.escape(i2)}
 
     def escape(%ExMatch.Tuple{items: items}),
       do: {:{}, [], ExMatch.List.escape_items(items)}
@@ -403,9 +403,9 @@ defmodule ExMatch.Map do
       %{^key => right_value} ->
         right = Map.delete(right, key)
 
-        case ExMatch.BindingProtocol.diff(field, right_value, opts) do
+        case ExMatch.Match.diff(field, right_value, opts) do
           {left_diff, right_diff} ->
-            left_diffs = [{ExMatch.BindingProtocol.escape(key), left_diff} | left_diffs]
+            left_diffs = [{ExMatch.Match.escape(key), left_diff} | left_diffs]
             right_diffs = Map.put(right_diffs, key, right_diff)
             {bindings, left_diffs, right_diffs, right, opts}
 
@@ -416,8 +416,8 @@ defmodule ExMatch.Map do
 
       _ ->
         left_diff = {
-          ExMatch.BindingProtocol.escape(key),
-          ExMatch.BindingProtocol.escape(field)
+          ExMatch.Match.escape(key),
+          ExMatch.Match.escape(field)
         }
 
         left_diffs = [left_diff | left_diffs]
@@ -430,12 +430,12 @@ defmodule ExMatch.Map do
     do:
       Enum.map(fields, fn {key, value} ->
         {
-          ExMatch.BindingProtocol.value(key),
-          ExMatch.BindingProtocol.value(value)
+          ExMatch.Match.value(key),
+          ExMatch.Match.value(value)
         }
       end)
 
-  defimpl ExMatch.BindingProtocol do
+  defimpl ExMatch.Match do
     @moduledoc false
 
     def diff(left, right, opts) when is_map(right) do
@@ -469,8 +469,8 @@ defmodule ExMatch.Map do
       fields =
         Enum.map(fields, fn {key, value} ->
           {
-            ExMatch.BindingProtocol.escape(key),
-            ExMatch.BindingProtocol.escape(value)
+            ExMatch.Match.escape(key),
+            ExMatch.Match.escape(value)
           }
         end)
 
@@ -491,7 +491,7 @@ defmodule ExMatch.Struct do
   defmodule WithValue do
     defstruct [:module, :fields, :value]
 
-    defimpl ExMatch.BindingProtocol do
+    defimpl ExMatch.Match do
       @moduledoc false
 
       def escape(%WithValue{module: module, fields: fields}),
@@ -503,7 +503,7 @@ defmodule ExMatch.Struct do
       def diff(left, right, opts) do
         %WithValue{module: module, fields: fields, value: value} = left
 
-        ExMatch.BindingProtocol.Any.diff_values(value, right, opts, fn _ ->
+        ExMatch.Match.Any.diff_values(value, right, opts, fn _ ->
           ExMatch.Struct.diff(module, fields, false, right, opts)
         end)
       end
@@ -513,7 +513,7 @@ defmodule ExMatch.Struct do
   defmodule NoValue do
     defstruct [:module, :fields, :partial]
 
-    defimpl ExMatch.BindingProtocol do
+    defimpl ExMatch.Match do
       @moduledoc false
 
       def escape(%NoValue{module: module, fields: fields, partial: partial}),
@@ -598,7 +598,7 @@ defmodule ExMatch.Struct do
     map = %ExMatch.Map{fields: fields, partial: partial}
     right_map = Map.from_struct(right)
 
-    case ExMatch.BindingProtocol.ExMatch.Map.diff(map, right_map, opts) do
+    case ExMatch.Match.ExMatch.Map.diff(map, right_map, opts) do
       {left_diff, right_diff} ->
         make_diff(module, fields, partial, right, left_diff, right_diff)
 
@@ -634,7 +634,7 @@ defmodule ExMatch.Struct do
       fields: fields
     }
 
-    map = ExMatch.BindingProtocol.ExMatch.Map.escape(map)
+    map = ExMatch.Match.ExMatch.Map.escape(map)
 
     {:%, [], [module, map]}
   end

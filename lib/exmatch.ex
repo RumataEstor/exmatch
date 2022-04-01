@@ -7,8 +7,6 @@ defmodule ExMatch do
   #{"README.md" |> File.read!() |> String.split("<!-- EXAMPLES -->") |> Enum.at(1)}
   """
 
-  alias ExMatch.BindingProtocol
-
   @doc """
   Raises if the values don't match and displays what exactly was different.
 
@@ -46,7 +44,7 @@ defmodule ExMatch do
         end
 
       unquote(bindings) =
-        case BindingProtocol.diff(unquote(left), unquote(right), unquote(opts_var)) do
+        case ExMatch.Match.diff(unquote(left), unquote(right), unquote(opts_var)) do
           {diff_left, diff_right} = diff ->
             raise ExUnit.AssertionError,
               left: diff_left,

@@ -1,15 +1,15 @@
-defprotocol ExMatch.Protocol do
+defprotocol ExMatch.Diff do
   @fallback_to_any true
 
   @spec diff(t, any, (atom -> any)) :: nil | {left :: any, right :: any}
   def diff(left, right, get_opts)
 end
 
-defimpl ExMatch.Protocol, for: Any do
+defimpl ExMatch.Diff, for: Any do
   def diff(value, value, _), do: nil
 
   def diff(left = %struct{}, right = %struct{}, get_opts) do
-    case ExMatch.Protocol.Map.diff(
+    case ExMatch.Diff.Map.diff(
            left |> Map.from_struct(),
            right |> Map.from_struct(),
            get_opts
@@ -26,9 +26,9 @@ defimpl ExMatch.Protocol, for: Any do
   end
 
   def diff(left, right = %_{}, get_opts) do
-    with impl = ExMatch.Protocol.impl_for(right),
-         false <- impl == ExMatch.Protocol.Any,
-         {right_result, left_result} <- ExMatch.Protocol.diff(right, left, get_opts) do
+    with impl = ExMatch.Diff.impl_for(right),
+         false <- impl == ExMatch.Diff.Any,
+         {right_result, left_result} <- ExMatch.Diff.diff(right, left, get_opts) do
       {left_result, right_result}
     else
       nil -> nil
@@ -40,9 +40,9 @@ defimpl ExMatch.Protocol, for: Any do
     do: {left, right}
 end
 
-defimpl ExMatch.Protocol, for: List do
+defimpl ExMatch.Diff, for: List do
   def diff([left_value | left], [right_value | right], get_opts) do
-    this_diff = ExMatch.Protocol.diff(left_value, right_value, get_opts)
+    this_diff = ExMatch.Diff.diff(left_value, right_value, get_opts)
     rest_diff = diff(left, right, get_opts)
 
     case {this_diff, rest_diff} do
@@ -67,12 +67,12 @@ defimpl ExMatch.Protocol, for: List do
   end
 end
 
-defimpl ExMatch.Protocol, for: Tuple do
+defimpl ExMatch.Diff, for: Tuple do
   def diff(left, right, get_opts) when is_tuple(right) do
     left = Tuple.to_list(left)
     right = Tuple.to_list(right)
 
-    case ExMatch.Protocol.List.diff(left, right, get_opts) do
+    case ExMatch.Diff.List.diff(left, right, get_opts) do
       {left, right} ->
         {List.to_tuple(left), List.to_tuple(right)}
 
@@ -86,7 +86,7 @@ defimpl ExMatch.Protocol, for: Tuple do
   end
 end
 
-defimpl ExMatch.Protocol, for: Map do
+defimpl ExMatch.Diff, for: Map do
   def diff(left, right, get_opts) when is_map(right) do
     case diff_items(left, right, get_opts) do
       {left_diffs, right_diffs, right}
@@ -111,7 +111,7 @@ defimpl ExMatch.Protocol, for: Map do
       %{^key => right_value} ->
         right = Map.delete(right, key)
 
-        case ExMatch.Protocol.diff(field, right_value, get_opts) do
+        case ExMatch.Diff.diff(field, right_value, get_opts) do
           {left_diff, right_diff} ->
             left_diffs = Map.put(left_diffs, key, left_diff)
             right_diffs = Map.put(right_diffs, key, right_diff)
@@ -128,7 +128,7 @@ defimpl ExMatch.Protocol, for: Map do
   end
 end
 
-defimpl ExMatch.Protocol, for: DateTime do
+defimpl ExMatch.Diff, for: DateTime do
   def diff(left, right, get_opts) when is_binary(right) do
     opts = get_opts.(DateTime) || []
 
@@ -158,7 +158,7 @@ defimpl ExMatch.Protocol, for: DateTime do
 end
 
 if Code.ensure_loaded?(Decimal) do
-  defimpl ExMatch.Protocol, for: Decimal do
+  defimpl ExMatch.Diff, for: Decimal do
     require Decimal
 
     def diff(left, right, get_opts) do
