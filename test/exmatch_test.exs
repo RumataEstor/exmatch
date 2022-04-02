@@ -363,10 +363,11 @@ defmodule ExMatchTest do
     match_fails(
       ExMatch.match(1, ~m(1.0), [{Decimal, :match_integer}]),
       fn ex ->
-        assert ex =~ """
-               left:  1 =~
-                 ** (Protocol.UndefinedError) protocol Enumerable not implemented for :match_integer of type Atom
-               """
+        assert ex =~
+                 String.trim_trailing("""
+                 left:  1 =~
+                   ** (Protocol.UndefinedError) protocol Enumerable not implemented for :match_integer of type Atom
+                 """)
 
         assert ex =~
                  String.trim_trailing("""
