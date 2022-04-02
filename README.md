@@ -26,13 +26,14 @@ The library depends on ExUnit.AssertionError and therefore is meant
 to be used only in testing.
 
 > #### Notice {: .neutral}
-> The examples below display the output you would see when testing using ExUnit.
+> The examples below display ExMatchTest.AssertionError as they are used as doctests.
+> When used in your tests the ExUnit.AssertionError would be used instead.
 > Using plain IEx environment will use basic struct formatter different
 > from ExUnit.CLIFormatter.
 
 ```elixir
 iex> ExMatch.match(%{a: 1, b: 2, c: 3}, %{c: 3, a: 2, b: {1, 0}})
-** (ExUnit.AssertionError)
+** (ExMatchTest.AssertionError)
 left:  %{a: 1, b: 2}
 right: %{a: 2, b: {1, 0}}
 ```
@@ -47,7 +48,7 @@ true
 ```elixir
 iex> eleven = 11
 iex> ExMatch.match(%Decimal{coef: ^eleven, exp: 1 - 1, sign: 1}, Decimal.add(1, eleven))
-** (ExUnit.AssertionError)
+** (ExMatchTest.AssertionError)
 left:  %Decimal{coef: ^eleven = 11, exp: 1 - 1 = 0, sign: 1}
 right: %Decimal{coef: 12, exp: 0, sign: 1}
 ```
@@ -60,7 +61,7 @@ iex> ExMatch.match(%ExMatchTest.Dummy{
 ...>    a: %ExMatchTest.Dummy{a: 1},
 ...>    b: Timex.parse!("2022-02-19 14:55:08.387165+09:45", "{ISO:Extended}")
 ...>  })
-** (ExUnit.AssertionError)
+** (ExMatchTest.AssertionError)
 left:  %ExMatchTest.Dummy{a: %ExMatchTest.Dummy1{}}
 right: %ExMatchTest.Dummy{a: %ExMatchTest.Dummy{}}
 ```

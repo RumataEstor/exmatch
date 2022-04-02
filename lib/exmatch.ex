@@ -7,6 +7,11 @@ defmodule ExMatch do
   #{"README.md" |> File.read!() |> String.split("<!-- EXAMPLES -->") |> Enum.at(1)}
   """
 
+  @assertion_error (if Mix.env() in [:test] do
+                      ExMatchTest.AssertionError
+                    else
+                      ExUnit.AssertionError
+                    end)
   @doc """
   Raises if the values don't match and displays what exactly was different.
 
@@ -46,7 +51,7 @@ defmodule ExMatch do
       unquote(bindings) =
         case ExMatch.Match.diff(unquote(left), unquote(right), unquote(opts_var)) do
           {diff_left, diff_right} = diff ->
-            raise ExUnit.AssertionError,
+            raise unquote(@assertion_error),
               left: diff_left,
               right: diff_right,
               context: {:match, []}

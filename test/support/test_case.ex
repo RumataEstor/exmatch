@@ -5,8 +5,6 @@ defmodule ExMatchTest.TestCase do
     quote do
       require ExMatch
       import ExMatchTest.TestCase
-
-      setup_all :patch_ex_unit_assertion_error
     end
   end
 
@@ -29,7 +27,7 @@ defmodule ExMatchTest.TestCase do
           unquote(expr)
           :ok
         rescue
-          error in ExUnit.AssertionError ->
+          error in ExMatchTest.AssertionError ->
             error
         end
 
@@ -47,7 +45,9 @@ defmodule ExMatchTest.TestCase do
       end
     end
   end
+end
 
+defmodule ExMatchTest.AssertionError do
   # Unfortunately ExUnit.AssertionError.message/1 adds double newlines
   # to the output however doctests don't have a way to handle such exception
   # messages and therefore they cannot be verified in the doctests.
@@ -55,46 +55,21 @@ defmodule ExMatchTest.TestCase do
   # Another inconsistency is that ExUnit.CLIFormatter uses its own code
   # to display differences in structs, so standard console and ExUnit tests
   # display diffs differently.
-  #
-  # This approach allows to validate doctests with the output expected to be seen
-  # in the ExUnit tests.
-  @ex_unit_assertion_error (quote do
-                              # Copy from ExUnit.AssertionError
-                              defmodule ExUnit.AssertionError do
-                                @moduledoc """
-                                Raised to signal an assertion error.
-                                """
 
-                                @no_value :ex_unit_no_meaningful_value
+  @enforce_keys [:left, :right, :context]
+  defexception @enforce_keys
 
-                                defexception left: @no_value,
-                                             right: @no_value,
-                                             message: @no_value,
-                                             expr: @no_value,
-                                             args: @no_value,
-                                             doctest: @no_value,
-                                             context: :==
+  @impl true
+  def message(self) do
+    %__MODULE__{left: left, right: right, context: context} = self
 
-                                @doc """
-                                Indicates no meaningful value for a field.
-                                """
-                                def no_value do
-                                  @no_value
-                                end
+    exception = %ExUnit.AssertionError{
+      left: left,
+      right: right,
+      context: context
+    }
 
-                                @impl true
-                                def message(exception) do
-                                  # removed leading newlines and use ExUnit.CLIFormatter
-                                  ExMatchTest.CLIFormatter.format_test_failure(exception)
-                                end
-                              end
-                            end)
-
-  def patch_ex_unit_assertion_error(_context) do
-    old = Code.compiler_options(ignore_module_conflict: true)
-    Code.compile_quoted(@ex_unit_assertion_error)
-    Code.compiler_options(old)
-    :ok
+    ExMatchTest.CLIFormatter.format_test_failure(exception)
   end
 end
 
