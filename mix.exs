@@ -1,11 +1,11 @@
 defmodule Exmatch.MixProject do
   use Mix.Project
 
-  def project,
-    do: [
+  def project do
+    check_version!(
       app: :exmatch,
       description: description(),
-      version: "0.8.0",
+      version: "0.9.0",
       elixir: "~> 1.10",
       elixirc_options: [warnings_as_errors: true],
       elixirc_paths: ["lib"] ++ if(Mix.env() in [:test, :dev], do: ["test/support"], else: []),
@@ -13,7 +13,8 @@ defmodule Exmatch.MixProject do
       deps: deps(),
       package: package(),
       docs: docs()
-    ]
+    )
+  end
 
   def application,
     do: []
@@ -49,4 +50,22 @@ defmodule Exmatch.MixProject do
         "LICENSE"
       ]
     ]
+
+  defp check_version!(project) do
+    project_version = project[:version]
+    readme = File.read!("README.md")
+    regex = ~r/defp deps do\s*\[\s*\{:exmatch, "~> ([\d\.]*)",/
+
+    readme_version =
+      case Regex.run(regex, readme) do
+        [_, readme_version] -> readme_version
+        _ -> raise "README.md doesn't contain expected deps example"
+      end
+
+    if project_version != readme_version do
+      raise "README.md uses #{readme_version} while project uses #{project_version}"
+    end
+
+    project
+  end
 end
