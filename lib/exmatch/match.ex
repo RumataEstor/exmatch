@@ -551,18 +551,15 @@ defmodule ExMatch.Struct do
   end
 
   def new(module, fields, partial, opts) do
-    {partial, fields} =
-      case Map.get(opts, module) do
-        nil ->
-          {partial, fields}
+    case Map.get(opts, module) do
+      nil ->
+        new(module, fields, partial)
 
-        %ExMatch.Map{} = opts ->
-          partial = opts.partial || partial
-          fields = Keyword.merge(opts.fields, fields)
-          {partial, fields}
-      end
-
-    new(module, fields, partial)
+      %ExMatch.Map{} = opts ->
+        partial = opts.partial || partial
+        fields = Keyword.merge(opts.fields, fields)
+        new(module, fields, partial)
+    end
   end
 
   defp new(module, fields, partial) do
@@ -603,7 +600,7 @@ defmodule ExMatch.Struct do
         make_diff(module, fields, partial, right, left_diff, right_diff)
 
       _ when module != rstruct ->
-        left_diff = []
+        left_diff = quote(do: %{})
         right_diff = %{}
         make_diff(module, fields, partial, right, left_diff, right_diff)
 

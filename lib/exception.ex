@@ -10,7 +10,7 @@ defmodule ExMatch.Exception do
 
     def inspect(%Self{} = self, _opts) do
       Exception.format(self.class, self.error, self.stacktrace)
-      |> String.trim_trailing()
+      |> String.trim()
     end
   end
 end

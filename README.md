@@ -53,17 +53,16 @@ right: %Decimal{coef: 12, exp: 0, sign: 1}
 ```
 
 ```elixir
-iex> alias ExMatchTest.{Dummy, Dummy1}
-iex> ExMatch.match(%Dummy{
-...>    a: %Dummy1{a: 1},
+iex> ExMatch.match(%ExMatchTest.Dummy{
+...>    a: %ExMatchTest.Dummy1{a: 1},
 ...>    b: ~U[2022-02-19 05:10:08.387165Z]
-...>  }, %Dummy{
-...>    a: %Dummy{a: 1},
+...>  }, %ExMatchTest.Dummy{
+...>    a: %ExMatchTest.Dummy{a: 1},
 ...>    b: Timex.parse!("2022-02-19 14:55:08.387165+09:45", "{ISO:Extended}")
 ...>  })
 ** (ExUnit.AssertionError)
-left:  %ExMatchTest.Dummy{a: %(ExMatchTest.Dummy1, [])}
-right: %ExMatchTest.Dummy{a: %{__struct__: ExMatchTest.Dummy}}
+left:  %ExMatchTest.Dummy{a: %ExMatchTest.Dummy1{}}
+right: %ExMatchTest.Dummy{a: %ExMatchTest.Dummy{}}
 ```
 
 <!-- EXAMPLES -->
