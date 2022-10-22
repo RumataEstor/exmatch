@@ -4,6 +4,7 @@ defmodule ExMatch do
   @moduledoc """
   Assertions for data equivalence.
 
+  #{"README.md" |> File.read!() |> String.split("<!-- USE_CASE -->") |> Enum.at(1)}
   #{"README.md" |> File.read!() |> String.split("<!-- EXAMPLES -->") |> Enum.at(1)}
   """
 

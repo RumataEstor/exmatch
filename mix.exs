@@ -29,7 +29,8 @@ defmodule Exmatch.MixProject do
       {:ex_doc, "~> 0.27", only: :dev, runtime: false},
       {:decimal, "~> 2.0", only: [:dev, :test]},
       {:mix_test_watch, "~> 1.1", only: [:dev, :test]},
-      {:timex, "~> 3.7", only: [:dev, :test]}
+      {:timex, "~> 3.7", only: [:dev, :test]},
+      {:ecto, ">= 0.0.0", only: [:dev, :test]}
     ]
 
   defp package,

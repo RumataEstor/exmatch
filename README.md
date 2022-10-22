@@ -7,6 +7,25 @@ and bind data in complex types such as maps and structs during testing.
 [![Hex.pm version](https://img.shields.io/hexpm/v/exmatch.svg)](http://hex.pm/packages/exmatch)
 [![Hex.pm downloads](https://img.shields.io/hexpm/dt/exmatch.svg)](https://hex.pm/packages/exmatch)
 
+<!-- USE_CASE -->
+## A use case
+
+Imagine you are writing a test using an Ecto model
+```elixir
+defmodule Order do
+  use Ecto.Schema
+  schema "orders" do
+    field :price, :decimal
+    timestamps type: :utc_datetime_usec
+  end
+end
+```
+
+```elixir
+assert %URI{host: "localhost", authority: "localhost:3000"} = 
+```
+<!-- USE_CASE -->
+
 ## Installation
 
 The package can be installed by adding `exmatch` to your list of dependencies in `mix.exs`:
