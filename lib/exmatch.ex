@@ -1,3 +1,5 @@
+alias ExMatch.ParseContext
+
 defmodule ExMatch do
   @external_resource "README.md"
 
@@ -36,7 +38,8 @@ defmodule ExMatch do
 
   defp do_match(left, right, opts) do
     opts_var = Macro.var(:opts, __MODULE__)
-    {bindings, left} = parse_ast(left, opts_var)
+    parse_context = %ParseContext{parse_ast: &parse_ast/2, opts: opts_var}
+    {bindings, left} = ParseContext.parse(left, parse_context)
 
     quote do
       unquote(opts_var) =
@@ -64,7 +67,8 @@ defmodule ExMatch do
     end
   end
 
-  defp parse_ast(left, _opts) when is_number(left) or is_bitstring(left) or is_atom(left) do
+  defp parse_ast(left, _parse_context)
+       when is_number(left) or is_bitstring(left) or is_atom(left) do
     self =
       quote do
         unquote(left)
@@ -73,35 +77,36 @@ defmodule ExMatch do
     {[], self}
   end
 
-  defp parse_ast({var, _, context} = left, _opts) when is_atom(var) and is_atom(context) do
+  defp parse_ast({var, _, context} = left, _parse_context)
+       when is_atom(var) and is_atom(context) do
     ExMatch.Var.parse(left)
   end
 
-  defp parse_ast({:when, _, [_binding, _condition]} = left, _opts) do
+  defp parse_ast({:when, _, [_binding, _condition]} = left, _parse_context) do
     ExMatch.Var.parse(left)
   end
 
-  defp parse_ast(left, opts) when is_list(left) do
-    ExMatch.List.parse(left, &parse_ast/2, opts)
+  defp parse_ast(left, parse_context) when is_list(left) do
+    ExMatch.List.parse(left, parse_context)
   end
 
-  defp parse_ast({_, _} = left, opts) do
-    ExMatch.Tuple.parse(left, &parse_ast/2, opts)
+  defp parse_ast({_, _} = left, parse_context) do
+    ExMatch.Tuple.parse(left, parse_context)
   end
 
-  defp parse_ast({:{}, _, _} = left, opts) do
-    ExMatch.Tuple.parse(left, &parse_ast/2, opts)
+  defp parse_ast({:{}, _, _} = left, parse_context) do
+    ExMatch.Tuple.parse(left, parse_context)
   end
 
-  defp parse_ast({:%{}, _, _} = left, opts) do
-    ExMatch.Map.parse(left, &parse_ast/2, opts)
+  defp parse_ast({:%{}, _, _} = left, parse_context) do
+    ExMatch.Map.parse(left, parse_context)
   end
 
-  defp parse_ast({:%, _, _} = left, opts) do
-    ExMatch.Struct.parse(left, &parse_ast/2, opts)
+  defp parse_ast({:%, _, _} = left, parse_context) do
+    ExMatch.Struct.parse(left, parse_context)
   end
 
-  defp parse_ast(left, _opts) do
+  defp parse_ast(left, _parse_context) do
     ExMatch.Expr.parse(left)
   end
 end

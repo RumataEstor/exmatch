@@ -1,3 +1,5 @@
+alias ExMatch.ParseContext
+
 defmodule ExMatch.Options do
   defstruct [:opts]
 
@@ -6,15 +8,15 @@ defmodule ExMatch.Options do
   end
 
   def parse(items, parse_ast) when is_list(items) do
-    empty_opts = Macro.escape(%{})
+    parse_context = %ParseContext{parse_ast: parse_ast, opts: Macro.escape(%{})}
 
     fields =
       Enum.map(items, fn
         {:%, _, [struct, {:%{}, _, _} = opts]} ->
-          parse_option(struct, opts, parse_ast, empty_opts)
+          parse_option(struct, opts, parse_context)
 
         {struct, opts} ->
-          parse_option(struct, opts, parse_ast, empty_opts)
+          parse_option(struct, opts, parse_context)
 
         other ->
           raise "Option item must be a structs or `{struct_module :: atom(), struct_opts :: term()}`, got: #{Macro.to_string(other)}"
@@ -27,8 +29,8 @@ defmodule ExMatch.Options do
     end
   end
 
-  defp parse_option(struct, opts, parse_ast, empty_opts) do
-    case parse_ast.(opts, empty_opts) do
+  defp parse_option(struct, opts, parse_context) do
+    case ParseContext.parse(opts, parse_context) do
       {[], map} ->
         {struct, map}
 

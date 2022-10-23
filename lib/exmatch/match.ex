@@ -1,3 +1,5 @@
+alias ExMatch.ParseContext
+
 defprotocol ExMatch.Match do
   @moduledoc false
 
@@ -68,6 +70,11 @@ defmodule ExMatch.Expr do
   def parse({:^, _, [{var_name, _, module} = var_item]} = ast)
       when is_atom(var_name) and is_atom(module),
       do: parse(ast, var_item)
+
+  # plain variable
+  def parse({var_name, _, module} = ast)
+      when is_atom(var_name) and is_atom(module),
+      do: parse(ast, ast)
 
   # remote function/macro call
   def parse({{:., _, [{:__aliases__, _, [module_alias | _]}, fn_name]}, _, args} = ast)
@@ -213,8 +220,8 @@ defmodule ExMatch.List do
 
   defstruct [:items]
 
-  def parse(list, parse_ast, opts) do
-    {bindings, parsed} = parse_items(list, [], [], parse_ast, opts)
+  def parse(list, parse_context) do
+    {bindings, parsed} = parse_items(list, [], [], parse_context)
 
     self =
       quote do
@@ -224,14 +231,14 @@ defmodule ExMatch.List do
     {bindings, self}
   end
 
-  def parse_items([item | list], bindings, parsed, parse_ast, opts) do
-    {item_bindings, item_parsed} = parse_ast.(item, opts)
+  def parse_items([item | list], bindings, parsed, parse_context) do
+    {item_bindings, item_parsed} = ParseContext.parse(item, parse_context)
     bindings = item_bindings ++ bindings
     parsed = [item_parsed | parsed]
-    parse_items(list, bindings, parsed, parse_ast, opts)
+    parse_items(list, bindings, parsed, parse_context)
   end
 
-  def parse_items([], bindings, parsed, _parse_ast, _opts) do
+  def parse_items([], bindings, parsed, _parse_context) do
     {bindings, Enum.reverse(parsed)}
   end
 
@@ -302,11 +309,11 @@ defmodule ExMatch.Tuple do
 
   defstruct [:items]
 
-  def parse({:{}, _, items}, parse_ast, opts), do: parse_items(items, parse_ast, opts)
-  def parse({item1, item2}, parse_ast, opts), do: parse_items([item1, item2], parse_ast, opts)
+  def parse({:{}, _, items}, parse_context), do: parse_items(items, parse_context)
+  def parse({item1, item2}, parse_context), do: parse_items([item1, item2], parse_context)
 
-  defp parse_items(items, parse_ast, opts) do
-    {bindings, parsed} = ExMatch.List.parse_items(items, [], [], parse_ast, opts)
+  defp parse_items(items, parse_context) do
+    {bindings, parsed} = ExMatch.List.parse_items(items, [], [], parse_context)
 
     self =
       quote do
@@ -356,8 +363,8 @@ defmodule ExMatch.Map do
   @enforce_keys [:partial, :fields]
   defstruct @enforce_keys
 
-  def parse({:%{}, _, fields}, parse_ast, opts) do
-    {partial, bindings, parsed} = parse_fields(fields, parse_ast, opts)
+  def parse({:%{}, _, fields}, parse_context) do
+    {partial, bindings, parsed} = parse_fields(fields, parse_context)
 
     self =
       quote do
@@ -370,22 +377,22 @@ defmodule ExMatch.Map do
     {bindings, self}
   end
 
-  def parse_fields(fields, parse_ast, opts) do
+  def parse_fields(fields, parse_context) do
     {partial, bindings, parsed} =
       Enum.reduce(fields, {false, [], []}, fn
         item, {partial, binding, parsed} ->
-          parse_field(item, partial, binding, parsed, parse_ast, opts)
+          parse_field(item, partial, binding, parsed, parse_context)
       end)
 
     {partial, bindings, Enum.reverse(parsed)}
   end
 
-  defp parse_field({:..., _, nil}, _partial, bindings, parsed, _parse_ast, _opts) do
+  defp parse_field({:..., _, nil}, _partial, bindings, parsed, _parse_context) do
     {true, bindings, parsed}
   end
 
-  defp parse_field({key, value}, partial, bindings, parsed, parse_ast, opts) do
-    {value_bindings, value_parsed} = parse_ast.(value, opts)
+  defp parse_field({key, value}, partial, bindings, parsed, parse_context) do
+    {value_bindings, value_parsed} = ParseContext.parse(value, parse_context)
     parsed = [{key, value_parsed} | parsed]
     bindings = value_bindings ++ bindings
     {partial, bindings, parsed}
@@ -529,13 +536,8 @@ defmodule ExMatch.Struct do
     end
   end
 
-  def parse(
-        {:%, _, [module, {:%{}, _, fields}]},
-        parse_ast,
-        opts
-      )
-      when is_list(fields) do
-    {partial, bindings, parsed} = ExMatch.Map.parse_fields(fields, parse_ast, opts)
+  def parse({:%, _, [module, {:%{}, _, fields}]}, parse_context) when is_list(fields) do
+    {partial, bindings, parsed} = ExMatch.Map.parse_fields(fields, parse_context)
 
     self =
       quote do
@@ -543,7 +545,7 @@ defmodule ExMatch.Struct do
           unquote(module),
           unquote(parsed),
           unquote(partial),
-          unquote(opts)
+          unquote(ParseContext.opts(parse_context))
         )
       end
 
