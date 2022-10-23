@@ -1,7 +1,10 @@
 alias ExMatch.ParseContext
 
 defmodule ExMatch.Options do
-  defstruct [:opts]
+  @moduledoc false
+
+  @enforce_keys [:opts]
+  defstruct @enforce_keys
 
   def parse({:%{}, _, items}, parse_ast) do
     parse(items, parse_ast)
@@ -24,7 +27,7 @@ defmodule ExMatch.Options do
 
     opts = {:%{}, [], fields}
 
-    quote do
+    quote location: :keep do
       %ExMatch.Options{opts: unquote(opts)}
     end
   end

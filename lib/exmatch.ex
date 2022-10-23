@@ -1,5 +1,3 @@
-alias ExMatch.ParseContext
-
 defmodule ExMatch do
   @external_resource "README.md"
 
@@ -14,6 +12,9 @@ defmodule ExMatch do
                     else
                       ExUnit.AssertionError
                     end)
+
+  alias ExMatch.ParseContext
+
   @doc """
   Raises if the values don't match and displays what exactly was different.
 
@@ -41,7 +42,7 @@ defmodule ExMatch do
     parse_context = %ParseContext{parse_ast: &parse_ast/2, opts: opts_var}
     {bindings, left} = ParseContext.parse(left, parse_context)
 
-    quote do
+    quote location: :keep do
       unquote(opts_var) =
         case unquote(opts) do
           %ExMatch.Options{opts: opts} ->
@@ -70,7 +71,7 @@ defmodule ExMatch do
   defp parse_ast(left, _parse_context)
        when is_number(left) or is_bitstring(left) or is_atom(left) do
     self =
-      quote do
+      quote location: :keep do
         unquote(left)
       end
 
