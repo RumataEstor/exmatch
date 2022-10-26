@@ -233,6 +233,30 @@ defmodule ExMatchTest do
     )
   end
 
+  test "struct updates 1" do
+    url = URI.parse("https://elixir-lang.org/")
+
+    match_fails(
+      ExMatch.match(%URI{url | scheme: "http"}, "http://localhost:3000"),
+      """
+      left:  %URI{(url = %URI{authority: "elixir-lang.org", fragment: nil, host: "elixir-lang.org", path: "/", port: 443, query: nil, userinfo: nil}) | scheme: "http"}
+      right: "http://localhost:3000"
+      """
+    )
+  end
+
+  test "struct updates 2" do
+    url = URI.parse("https://elixir-lang.org/")
+
+    match_fails(
+      ExMatch.match(%URI{url | scheme: "http"}, URI.parse("http://localhost:3000")),
+      """
+      left:  url = %URI{authority: "elixir-lang.org", host: "elixir-lang.org", path: "/", port: 443}
+      right: %URI{authority: "localhost:3000", host: "localhost", path: nil, port: 3000}
+      """
+    )
+  end
+
   @opts ExMatch.options(%{
           ExMatchTest.Dummy => %{b: {1, _, _, ExMatchTest.Dummy.id(3 + 1)}}
         })
@@ -371,16 +395,16 @@ defmodule ExMatchTest do
     match_fails(
       ExMatch.match(%Decimal{coef: 11, exp: -1, sign: 1}, ~m(11)),
       """
-      left:  %Decimal{coef: 11, exp: -1, sign: 1}
-      right: %Decimal{coef: 11, exp: 0, sign: 1}
+      left:  %Decimal{exp: -1}
+      right: %Decimal{exp: 0}
       """
     )
 
     match_fails(
       ExMatch.match(%Decimal{coef: ^eleven, exp: 1 - 1, sign: 1}, Decimal.add(1, eleven)),
       """
-      left:  %Decimal{coef: ^eleven = 11, exp: 1 - 1 = 0, sign: 1}
-      right: %Decimal{coef: 12, exp: 0, sign: 1}
+      left:  %Decimal{coef: ^eleven = 11}
+      right: %Decimal{coef: 12}
       """
     )
 

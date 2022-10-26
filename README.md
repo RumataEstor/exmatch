@@ -49,8 +49,8 @@ true
 iex> eleven = 11
 iex> ExMatch.match(%Decimal{coef: ^eleven, exp: 1 - 1, sign: 1}, Decimal.add(1, eleven))
 ** (ExMatchTest.AssertionError)
-left:  %Decimal{coef: ^eleven = 11, exp: 1 - 1 = 0, sign: 1}
-right: %Decimal{coef: 12, exp: 0, sign: 1}
+left:  %Decimal{coef: ^eleven = 11}
+right: %Decimal{coef: 12}
 ```
 
 ```elixir
@@ -64,6 +64,21 @@ iex> ExMatch.match(%ExMatchTest.Dummy{
 ** (ExMatchTest.AssertionError)
 left:  %ExMatchTest.Dummy{a: %ExMatchTest.Dummy1{}}
 right: %ExMatchTest.Dummy{a: %ExMatchTest.Dummy{}}
+```
+
+```elixir
+iex> url = URI.parse("https://elixir-lang.org/")
+iex> ExMatch.match(%URI{url | path: path}, URI.parse("https://elixir-lang.org/cases.html"))
+iex> path == "/cases.html"
+true
+```
+
+```elixir
+iex> url = URI.parse("https://elixir-lang.org/")
+iex> ExMatch.match(%URI{url | scheme: "http"}, URI.parse("http://localhost:3000"))
+** (ExMatchTest.AssertionError)
+left:  url = %URI{authority: "elixir-lang.org", host: "elixir-lang.org", path: "/", port: 443}
+right: %URI{authority: "localhost:3000", host: "localhost", path: nil, port: 3000}
 ```
 
 <!-- EXAMPLES -->

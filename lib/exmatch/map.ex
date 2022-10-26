@@ -41,11 +41,24 @@ defmodule ExMatch.Map do
     {partial, bindings, parsed}
   end
 
-  def diff_items(fields, right, opts) do
-    {bindings, left_diffs, right_diffs, right, _opts} =
-      Enum.reduce(fields, {[], [], %{}, right, opts}, &diff_item/2)
+  def diff_items(fields, right, partial, opts) do
+    case Enum.reduce(fields, {[], [], %{}, right, opts}, &diff_item/2) do
+      {bindings, [], right_diffs, right, _opts}
+      when right_diffs == %{} and (partial or right == %{}) ->
+        bindings
 
-    {bindings, Enum.reverse(left_diffs), right_diffs, right}
+      {_bindings, left_diffs, right_diffs, right, _opts} ->
+        left_diffs = Enum.reverse(left_diffs)
+
+        right_diffs =
+          if partial do
+            right_diffs
+          else
+            Map.merge(right_diffs, right)
+          end
+
+        {left_diffs, right_diffs}
+    end
   end
 
   defp diff_item({key, field}, {bindings, left_diffs, right_diffs, right, opts}) do
@@ -100,23 +113,13 @@ defmodule ExMatch.Map do
     def diff(left, right, opts) when is_map(right) do
       %ExMatch.Map{partial: partial, fields: fields} = left
 
-      case ExMatch.Map.diff_items(fields, right, opts) do
-        {bindings, left_diffs, right_diffs, right}
-        when left_diffs == [] and
-               right_diffs == %{} and
-               (partial or right == %{}) ->
-          bindings
-
-        {_bindings, left_diffs, right_diffs, right} ->
-          right_diffs =
-            if partial do
-              right_diffs
-            else
-              Map.merge(right_diffs, right)
-            end
-
+      case ExMatch.Map.diff_items(fields, right, partial, opts) do
+        {left_diffs, right_diffs} ->
           left_diffs = {:%{}, [], left_diffs}
           {left_diffs, right_diffs}
+
+        bindings ->
+          bindings
       end
     end
 

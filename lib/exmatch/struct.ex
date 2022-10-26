@@ -4,55 +4,66 @@ defmodule ExMatch.Struct do
   alias ExMatch.ParseContext
 
   defmodule WithValue do
-    @enforce_keys [:module, :fields, :value]
+    @enforce_keys [:module, :base, :fields, :value]
     defstruct @enforce_keys
 
     defimpl ExMatch.Match do
       @moduledoc false
 
-      def escape(%WithValue{module: module, fields: fields}),
-        do: ExMatch.Struct.escape(module, fields, false)
+      def escape(%WithValue{module: module, base: base, fields: fields}),
+        do: ExMatch.Struct.escape(module, base, fields, false)
 
       def value(%WithValue{value: value}),
         do: value
 
       def diff(left, right, opts) do
-        %WithValue{module: module, fields: fields, value: value} = left
+        %WithValue{module: module, base: base, fields: fields, value: value} = left
 
         ExMatch.Match.Any.diff_values(value, right, opts, fn _ ->
-          ExMatch.Struct.diff(module, fields, false, right, opts)
+          ExMatch.Struct.diff(module, base, fields, false, right, opts)
         end)
       end
     end
   end
 
   defmodule NoValue do
-    @enforce_keys [:module, :fields, :partial]
+    @enforce_keys [:module, :base, :fields, :partial]
     defstruct @enforce_keys
 
     defimpl ExMatch.Match do
       @moduledoc false
 
-      def escape(%NoValue{module: module, fields: fields, partial: partial}),
-        do: ExMatch.Struct.escape(module, fields, partial)
+      def escape(%NoValue{module: module, base: base, fields: fields, partial: partial}),
+        do: ExMatch.Struct.escape(module, base, fields, partial)
 
       def value(%NoValue{}),
         do: raise(ArgumentError, "This struct doesn't have value")
 
       def diff(left, right, opts) do
-        %NoValue{module: module, fields: fields, partial: partial} = left
-        ExMatch.Struct.diff(module, fields, partial, right, opts)
+        %NoValue{module: module, base: base, fields: fields, partial: partial} = left
+        ExMatch.Struct.diff(module, base, fields, partial, right, opts)
       end
     end
   end
 
   def parse({:%, _, [module, {:%{}, _, fields}]}, parse_context) when is_list(fields) do
+    {base_parsed, fields} =
+      case fields do
+        [{:|, _, [base, fields]}] ->
+          {[], base_parsed} = ExMatch.Expr.parse(base)
+          {base_parsed, fields}
+
+        _ ->
+          {nil, fields}
+      end
+
     {partial, bindings, parsed} = ExMatch.Map.parse_fields(fields, parse_context)
 
     self =
       quote location: :keep do
         ExMatch.Struct.new(
           unquote(module),
+          unquote(base_parsed),
           unquote(parsed),
           unquote(partial),
           unquote(ParseContext.opts(parse_context))
@@ -62,35 +73,55 @@ defmodule ExMatch.Struct do
     {bindings, self}
   end
 
-  def new(module, fields, partial, opts) do
+  def new(module, base, fields, partial, opts) do
     case Map.get(opts, module) do
-      nil ->
-        new(module, fields, partial)
+      opts when base != nil or opts == nil ->
+        new(module, base, fields, partial)
 
       %ExMatch.Map{} = opts ->
-        partial = opts.partial || partial
+        partial = if(base, do: false, else: opts.partial || partial)
         fields = Keyword.merge(opts.fields, fields)
-        new(module, fields, partial)
+        new(module, base, fields, partial)
     end
   end
 
-  defp new(module, fields, partial) do
+  defp new(module, base, fields, partial) do
     if partial do
+      # caught below
       raise ArgumentError
     end
 
-    value = struct!(module, ExMatch.Map.field_values(fields))
+    {value, fields} =
+      case ExMatch.Match.value(base) do
+        nil ->
+          value = struct!(module, ExMatch.Map.field_values(fields))
 
-    fields =
-      value
-      |> Map.from_struct()
-      |> Enum.map(fn {key, value} ->
-        {key, Macro.escape(value)}
-      end)
-      |> Keyword.merge(fields, fn _, _, field -> field end)
+          fields =
+            value
+            |> Map.from_struct()
+            |> Enum.to_list()
+            |> Keyword.merge(fields, fn _, _, field -> field end)
+
+          {value, fields}
+
+        %base_struct{} = base_value when base_struct == module ->
+          value = struct!(base_value, ExMatch.Map.field_values(fields))
+          {value, fields}
+
+        value ->
+          struct = %NoValue{
+            module: module,
+            base: base,
+            fields: fields,
+            partial: partial
+          }
+
+          raise "The #{ExMatch.Match.escape(struct)} struct update syntax was called with #{inspect(value)} as a base"
+      end
 
     %WithValue{
       module: module,
+      base: base,
       fields: fields,
       value: value
     }
@@ -98,53 +129,116 @@ defmodule ExMatch.Struct do
     ArgumentError ->
       %NoValue{
         module: module,
+        base: base,
         fields: fields,
         partial: partial
       }
   end
 
-  def diff(module, fields, partial, %rstruct{} = right, opts) do
-    map = %ExMatch.Map{fields: fields, partial: partial}
+  def diff(module, base, fields, partial, %rstruct{} = right, opts) do
+    all_fields =
+      if base do
+        base
+        |> ExMatch.Match.value()
+        |> Map.from_struct()
+        |> Map.drop(Keyword.keys(fields))
+        |> Enum.concat(fields)
+      else
+        fields
+      end
+
     right_map = Map.from_struct(right)
 
-    case ExMatch.Match.ExMatch.Map.diff(map, right_map, opts) do
+    case ExMatch.Map.diff_items(all_fields, right_map, partial, opts) do
       {left_diff, right_diff} ->
-        make_diff(module, fields, partial, right, left_diff, right_diff)
+        make_diff(module, base, fields, partial, right, left_diff, right_diff)
 
       _ when module != rstruct ->
-        left_diff = quote(do: %{})
+        left_diff = []
         right_diff = %{}
-        make_diff(module, fields, partial, right, left_diff, right_diff)
+        make_diff(module, base, fields, partial, right, left_diff, right_diff)
 
       bindings ->
         bindings
     end
   end
 
-  def diff(module, fields, partial, right, _opts) do
-    {escape(module, fields, partial), right}
+  def diff(module, base, fields, partial, right, _opts) do
+    {escape(module, base, fields, partial, nil), right}
   end
 
-  defp make_diff(module, fields, partial, %rstruct{} = right, left_diff, right_diff) do
-    right_diff = Map.put(right_diff, :__struct__, rstruct)
-
-    try do
-      _ = inspect(right_diff, safe: false)
-      {{:%, [], [module, left_diff]}, right_diff}
-    rescue
-      _ ->
-        {escape(module, fields, partial), right}
-    end
+  defp make_diff(module, base, fields, _partial, %rstruct{}, left_diff, right_diff) do
+    {escape(module, base, fields, true, left_diff),
+     escape(rstruct, nil, Enum.to_list(right_diff), true, nil)}
   end
 
-  def escape(module, fields, partial) do
-    map = %ExMatch.Map{
-      partial: partial,
-      fields: fields
-    }
+  def escape(module, base, fields, _partial, diff) do
+    base_info =
+      case base do
+        %ExMatch.Expr{ast: base_expr, value: base_value} ->
+          base_fields =
+            base_value
+            |> Map.from_struct()
+            |> Map.drop(Keyword.keys(fields))
+            |> fields_in_diff(diff)
 
-    map = ExMatch.Match.ExMatch.Map.escape(map)
+          {base_expr, base_fields}
 
-    {:%, [], [module, map]}
+        nil ->
+          nil
+      end
+
+    fields =
+      fields
+      |> fields_in_diff(diff)
+      |> ExMatch.Map.escape_fields()
+
+    module = Macro.to_string(module)
+
+    rendered =
+      case base_info do
+        nil ->
+          ["%", module, "{" | render_fields(fields, "}")]
+
+        {base_expr, base_fields} when fields == [] ->
+          [
+            ExMatch.View.inspect(base_expr),
+            " = %",
+            module,
+            "{"
+            | render_fields(base_fields, "}")
+          ]
+
+        {base_expr, base_fields} ->
+          [
+            "%",
+            module,
+            "{(",
+            ExMatch.View.inspect(base_expr),
+            " = %",
+            module,
+            "{"
+            | render_fields(base_fields, ["}) | " | render_fields(fields, "}")])
+          ]
+      end
+
+    ExMatch.View.Rendered.new(rendered)
+  end
+
+  defp render_fields([], tail), do: tail
+
+  defp render_fields(fields, tail) do
+    [[_ | tl1] | tl2] =
+      for {key, value} <- fields do
+        [", ", to_string(key), ": " | ExMatch.View.inspect(value)]
+      end
+
+    [tl1, tl2 | tail]
+  end
+
+  defp fields_in_diff(fields, nil), do: Enum.to_list(fields)
+
+  defp fields_in_diff(fields, diff) do
+    Keyword.take(diff, Enum.map(fields, fn {key, _} -> key end))
   end
 end
