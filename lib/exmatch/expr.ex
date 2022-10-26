@@ -14,15 +14,19 @@ defmodule ExMatch.Expr do
       when is_atom(var_name) and is_atom(module),
       do: parse(ast, ast)
 
-  # remote function/macro call
-  def parse({{:., _, [{:__aliases__, _, [module_alias | _]}, fn_name]}, _, args} = ast)
-      when is_atom(module_alias) and is_atom(fn_name) and is_list(args),
-      do: parse(ast, ast)
+  # remote function/macro call or dot syntax
+  def parse({{:., _, [_, _]}, _, args} = ast) when is_list(args),
+    do: parse(ast, ast)
+
+  # binary strings with interpolation
+  def parse({:<<>>, _, args} = ast) when is_list(args),
+    do: parse(ast, ast)
 
   # local/imported function/macro call
   def parse({fn_name, _, args} = ast) when is_atom(fn_name) and is_list(args) do
     if Macro.special_form?(fn_name, length(args)) do
-      raise "Special form #{fn_name}/#{length(args)} is not yet supported in ExMatch"
+      raise "Special form #{fn_name}/#{length(args)} is not yet supported in ExMatch\n" <>
+              "Please submit a report to handle #{inspect(ast)}"
     end
 
     parse(ast, ast)

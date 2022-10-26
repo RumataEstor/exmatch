@@ -257,6 +257,27 @@ defmodule ExMatchTest do
     )
   end
 
+  test "dot syntax" do
+    url = URI.parse("https://elixir-lang.org/")
+    map = %{port: 8080}
+
+    ExMatch.match(
+      %URI{url | port: map.port, authority: "#{url.authority}:#{map.port}"},
+      URI.parse("https://elixir-lang.org:8080/")
+    )
+
+    match_fails(
+      ExMatch.match(
+        %URI{url | scheme: "http", port: map.port, authority: "#{url.authority}:#{map.port}"},
+        "http://localhost:3000"
+      ),
+      """
+      left:  %URI{(url = %URI{fragment: nil, host: "elixir-lang.org", path: "/", query: nil, userinfo: nil}) | scheme: "http", port: map.port = 8080, authority: \"\#{url.authority}:\#{map.port}\" = "elixir-lang.org:8080"}
+      right: "http://localhost:3000"
+      """
+    )
+  end
+
   @opts ExMatch.options(%{
           ExMatchTest.Dummy => %{b: {1, _, _, ExMatchTest.Dummy.id(3 + 1)}}
         })
