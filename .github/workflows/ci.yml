@@ -26,6 +26,9 @@ jobs:
         - elixir: '1.13'
           otp: '24'
           lint: true
+        - elixir: '1.14'
+          otp: '25'
+          lint: true
     steps:
       - uses: actions/checkout@v2
       - uses: erlef/setup-elixir@v1
