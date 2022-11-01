@@ -34,12 +34,12 @@ defmodule ExMatch do
   end
 
   defp parse_options(item) do
-    ExMatch.Options.parse(item, &parse_ast/2)
+    ExMatch.Options.parse(item)
   end
 
   def gen_match(left, right, opts_expr) do
     opts_var = Macro.var(:opts, __MODULE__)
-    parse_context = %ParseContext{parse_ast: &parse_ast/2, opts: opts_var}
+    parse_context = %ParseContext{opts: opts_var}
     {bindings, left} = ParseContext.parse(left, parse_context)
 
     quote location: :keep do
@@ -66,48 +66,5 @@ defmodule ExMatch do
 
       :ok
     end
-  end
-
-  defp parse_ast(left, _parse_context)
-       when is_number(left) or is_bitstring(left) or is_atom(left) do
-    self =
-      quote location: :keep do
-        unquote(left)
-      end
-
-    {[], self}
-  end
-
-  defp parse_ast({var, _, context} = left, _parse_context)
-       when is_atom(var) and is_atom(context) do
-    ExMatch.Var.parse(left)
-  end
-
-  defp parse_ast({:when, _, [_binding, _condition]} = left, _parse_context) do
-    ExMatch.Var.parse(left)
-  end
-
-  defp parse_ast(left, parse_context) when is_list(left) do
-    ExMatch.List.parse(left, parse_context)
-  end
-
-  defp parse_ast({_, _} = left, parse_context) do
-    ExMatch.Tuple.parse(left, parse_context)
-  end
-
-  defp parse_ast({:{}, _, _} = left, parse_context) do
-    ExMatch.Tuple.parse(left, parse_context)
-  end
-
-  defp parse_ast({:%{}, _, _} = left, parse_context) do
-    ExMatch.Map.parse(left, parse_context)
-  end
-
-  defp parse_ast({:%, _, _} = left, parse_context) do
-    ExMatch.Struct.parse(left, parse_context)
-  end
-
-  defp parse_ast(left, _parse_context) do
-    ExMatch.Expr.parse(left)
   end
 end
