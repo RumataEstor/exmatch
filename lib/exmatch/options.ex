@@ -22,13 +22,29 @@ defmodule ExMatch.Options do
           parse_option(struct, opts, parse_context)
 
         other ->
-          raise "Option item must be a structs or `{struct_module :: atom(), struct_opts :: term()}`, got: #{Macro.to_string(other)}"
+          raise "An option item must be a struct or `{struct_module :: atom(), struct_opts :: term()}`, got: #{Macro.to_string(other)}"
       end)
 
     opts = {:%{}, [], fields}
 
     quote location: :keep do
       %ExMatch.Options{opts: unquote(opts)}
+    end
+  end
+
+  def parse(opts_expr, _parse_ast) do
+    if Macro.quoted_literal?(opts_expr) do
+      raise "Options argument must be a map or a list, got: #{Macro.to_string(opts_expr)}"
+    end
+
+    quote location: :keep do
+      case unquote(opts_expr) do
+        %ExMatch.Options{} = opts ->
+          opts
+
+        other ->
+          raise "The options provided as #{unquote(Macro.to_string(opts_expr))} must be built using ExMatch.options/1, got #{inspect(other)}"
+      end
     end
   end
 
@@ -39,16 +55,6 @@ defmodule ExMatch.Options do
 
       {vars, _} ->
         raise "Options cannot export variables, found #{Macro.to_string(vars)} in struct #{Macro.to_string(struct)}"
-    end
-  end
-
-  def parse(other, _parse_ast) do
-    cond do
-      Macro.quoted_literal?(other) ->
-        raise "Options argument must be a map or a list, got: #{Macro.to_string(other)}"
-
-      true ->
-        other
     end
   end
 end

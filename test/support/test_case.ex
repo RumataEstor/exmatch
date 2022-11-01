@@ -3,7 +3,6 @@ defmodule ExMatchTest.TestCase do
 
   using do
     quote do
-      require ExMatch
       import ExMatchTest.TestCase
     end
   end

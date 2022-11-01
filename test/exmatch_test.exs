@@ -2,6 +2,7 @@ defmodule ExMatchTest do
   @external_resource "README.md"
 
   use ExMatchTest.TestCase
+  require ExMatch
 
   doctest ExMatch
 
@@ -343,7 +344,7 @@ defmodule ExMatchTest do
 
     assert_raise(
       RuntimeError,
-      "Option item must be a structs or `{struct_module :: atom(), struct_opts :: term()}`, got: %{a: 1}",
+      "An option item must be a struct or `{struct_module :: atom(), struct_opts :: term()}`, got: %{a: 1}",
       fn ->
         quote do
           ExMatch.match(%Dummy{}, struct, [%{a: 1}])

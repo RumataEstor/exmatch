@@ -22,34 +22,34 @@ defmodule ExMatch do
   iex> 2 = a
   """
   defmacro match(left, right) do
-    do_match(left, right, quote(do: %ExMatch.Options{opts: %{}}))
+    gen_match(left, right, parse_options([]))
   end
 
   defmacro match(left, right, opts) do
-    do_match(left, right, options_(opts))
+    gen_match(left, right, parse_options(opts))
   end
 
   defmacro options(item) do
-    options_(item)
+    parse_options(item)
   end
 
-  defp options_(item) do
+  defp parse_options(item) do
     ExMatch.Options.parse(item, &parse_ast/2)
   end
 
-  defp do_match(left, right, opts) do
+  def gen_match(left, right, opts_expr) do
     opts_var = Macro.var(:opts, __MODULE__)
     parse_context = %ParseContext{parse_ast: &parse_ast/2, opts: opts_var}
     {bindings, left} = ParseContext.parse(left, parse_context)
 
     quote location: :keep do
       unquote(opts_var) =
-        case unquote(opts) do
+        case unquote(opts_expr) do
           %ExMatch.Options{opts: opts} ->
             opts
 
           other ->
-            raise "The 3rd opts argument must be built using ExMatch.options/1"
+            raise "The options provided as #{unquote(Macro.to_string(opts_expr))} must be built using ExMatch.options/1, got #{inspect(other)}"
         end
 
       unquote(bindings) =
