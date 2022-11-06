@@ -62,12 +62,11 @@ defmodule ExMatch.Expr do
 
     def escape(%ExMatch.Expr{ast: ast, value: value}) do
       code = Macro.to_string(ast)
-      value = inspect(value)
 
-      if code == value do
-        ExMatch.View.Rendered.new(code)
+      if code == inspect(value) do
+        ast
       else
-        ExMatch.View.Rendered.new([code, " = ", value])
+        {:=, [], [ast, value]}
       end
     end
 

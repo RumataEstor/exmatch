@@ -21,7 +21,7 @@ defimpl ExMatch.Match, for: Any do
   end
 
   def escape(self),
-    do: Macro.escape(self)
+    do: self
 
   def value(self),
     do: self
