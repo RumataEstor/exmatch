@@ -16,66 +16,7 @@ defmodule ExMatch do
   alias ExMatch.ParseContext
 
   defmacro __using__(opts) do
-    name = Keyword.get(opts, :as, :exmatch)
-    public = Keyword.get(opts, :pub, false)
-
-    if not is_atom(name) do
-      raise "'as' must be an atom, got #{inspect(name)}"
-    end
-
-    if not is_boolean(public) do
-      raise "'pub' must be a boolean, got #{inspect(public)}"
-    end
-
-    opts =
-      opts
-      |> Keyword.get(:opts, [])
-      |> ExMatch.Options.parse()
-
-    preface = remove_imports([{name, 1}], __CALLER__)
-
-    opts_fun_suffix = :crypto.strong_rand_bytes(5) |> Base.encode32()
-    opts_fun_name = :"exmatch_fun_#{opts_fun_suffix}"
-
-    quote location: :keep do
-      unquote(preface)
-
-      defp unquote(opts_fun_name)() do
-        unquote(opts)
-      end
-
-      defmacrop unquote(name)(left, right) do
-        opts_fun_name = unquote(opts_fun_name)
-
-        quote location: :keep do
-          ExMatch.match(unquote(left), unquote(right), unquote(opts_fun_name)())
-        end
-      end
-
-      defmacrop unquote(name)(expr) do
-        opts_fun_name = unquote(opts_fun_name)
-
-        quote location: :keep do
-          ExMatch.match(unquote(expr), unquote(opts_fun_name)())
-        end
-      end
-    end
-  end
-
-  defp remove_imports(funs, caller) do
-    funs
-    |> Enum.flat_map(fn fun ->
-      caller
-      |> Macro.Env.lookup_import(fun)
-      |> Enum.map(fn {_, module} -> {module, fun} end)
-    end)
-    |> Enum.uniq()
-    |> Enum.group_by(fn {module, _} -> module end, fn {_, fun} -> fun end)
-    |> Enum.map(fn {module, funs} ->
-      quote do
-        import unquote(module), except: unquote(funs)
-      end
-    end)
+    ExMatch.Use.setup(opts, __CALLER__)
   end
 
   defmacro match(expr) do
