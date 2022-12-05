@@ -22,6 +22,10 @@ defmodule ExMatch.Expr do
   def parse({:<<>>, _, args} = ast) when is_list(args),
     do: parse(ast, ast)
 
+  # alias
+  def parse({:__aliases__, _, _} = ast),
+    do: parse(ast, ast)
+
   # local/imported function/macro call
   def parse({fn_name, _, args} = ast) when is_atom(fn_name) and is_list(args) do
     if Macro.special_form?(fn_name, length(args)) do

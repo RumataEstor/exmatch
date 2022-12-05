@@ -466,5 +466,37 @@ defmodule ExMatchTest do
     )
   end
 
+  test "aliases" do
+    alias Test.Aliases.A1
+    ExMatch.match(A1 == A1)
+    ExMatch.match(A1 == Test.Aliases.A1)
+    ExMatch.match(Test.Aliases.A1 == A1)
+    ExMatch.match([A1] == [Test.Aliases.A1])
+
+    match_fails(
+      ExMatch.match(A1 == Test.Aliases.A2),
+      """
+      left:  A1 = Test.Aliases.A1
+      right: Test.Aliases.A2
+      """
+    )
+
+    match_fails(
+      ExMatch.match([A1] == [Test.Aliases.A2]),
+      """
+      left:  [A1 = Test.Aliases.A1]
+      right: [Test.Aliases.A2]
+      """
+    )
+
+    match_fails(
+      ExMatch.match(Test.Aliases.A2 == A1),
+      """
+      left:  Test.Aliases.A2
+      right: Test.Aliases.A1
+      """
+    )
+  end
+
   defp id(value), do: value
 end
