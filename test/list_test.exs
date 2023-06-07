@@ -62,4 +62,16 @@ defmodule ExMatchTest.List do
       """
     )
   end
+
+  test "expr prefix matches" do
+    v = [1, 2, 4]
+
+    match_fails(
+      ExMatch.match(^v, [1, 2, 3]),
+      """
+      left:  ^v =~ [..2.., 4]
+      right: [..2.., 3]
+      """
+    )
+  end
 end

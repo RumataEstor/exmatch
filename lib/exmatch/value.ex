@@ -41,29 +41,42 @@ defimpl ExMatch.Value, for: Any do
 end
 
 defimpl ExMatch.Value, for: List do
-  def diff([left_value | left], [right_value | right], get_opts) do
+  def diff(left, right, get_opts) do
+    case diff_int(left, right, get_opts) do
+      {_skipped, [], []} -> nil
+      other -> unskip(other)
+    end
+  end
+
+  defp diff_int([left_value | left], [right_value | right], get_opts) do
     this_diff = ExMatch.Value.diff(left_value, right_value, get_opts)
-    rest_diff = diff(left, right, get_opts)
+    rest_diff = diff_int(left, right, get_opts)
 
-    case {this_diff, rest_diff} do
-      {nil, nil} ->
-        nil
+    case this_diff do
+      nil ->
+        skip(rest_diff)
 
-      {nil, {left_results, right_results}} ->
-        {[:eq | left_results], [:eq | right_results]}
-
-      {{left_result, right_result}, nil} ->
-        {[left_result], [right_result]}
-
-      {{left_result, right_result}, {left_results, right_results}} ->
+      {left_result, right_result} ->
+        {left_results, right_results} = unskip(rest_diff)
         {[left_result | left_results], [right_result | right_results]}
     end
   end
 
-  def diff([], [], _), do: nil
+  defp diff_int([], [], _), do: {[], []}
+  defp diff_int(left, right, _), do: {left, right}
 
-  def diff(left, right, _) do
-    {left, right}
+  defp skip({skipped, left_results, right_results}),
+    do: {skipped + 1, left_results, right_results}
+
+  defp skip({left_results, right_results}),
+    do: {1, left_results, right_results}
+
+  defp unskip({left_results, right_results}),
+    do: {left_results, right_results}
+
+  defp unskip({skipped, left_results, right_results}) do
+    skipped = %ExMatch.Skipped{num: skipped}
+    {[skipped | left_results], [skipped | right_results]}
   end
 end
 
