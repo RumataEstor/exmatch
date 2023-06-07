@@ -361,84 +361,6 @@ defmodule ExMatchTest do
     end)
   end
 
-  test "DateTime" do
-    # Timex keeps offsets in the DateTime unlike DateTime.parse
-    datetime = Timex.parse!("2022-02-19 14:55:08.387165+09:45", "{ISO:Extended}")
-    ExMatch.match("2022-02-19 14:55:08.387165+09:45", datetime, [{DateTime, [:match_string]}])
-    ExMatch.match("2022-02-19 05:10:08.387165Z", datetime, [{DateTime, [:match_string]}])
-    ExMatch.match(~U[2022-02-19 05:10:08.387165Z], datetime)
-
-    match_fails(
-      ExMatch.match("2022-02-19 14:55:08.387165+09:45", datetime),
-      """
-      left:  "2022-02-19 14:55:08.387165+09:45"
-      right: #DateTime<2022-02-19 14:55:08.387165+09:45 +09:45 Etc/UTC+9:45>
-      """
-    )
-
-    match_fails(
-      ExMatch.match("2022-02-19 05:10:08.387165Z", datetime),
-      """
-      left:  "2022-02-19 05:10:08.387165Z"
-      right: #DateTime<2022-02-19 14:55:08.387165+09:45 +09:45 Etc/UTC+9:45>
-      """
-    )
-
-    match_fails(
-      ExMatch.match(^datetime, nil),
-      """
-      left:  ^datetime = #DateTime<2022-02-19 14:55:08.387165+09:45 +09:45 Etc/UTC+9:45>
-      right: nil
-      """
-    )
-  end
-
-  test "Decimal" do
-    eleven = 11
-    opts = ExMatch.options([{Decimal, [:match_integer, :match_string]}])
-    ExMatch.match(1, ~m(1.0), [{Decimal, [:match_integer]}])
-    ExMatch.match("1", ~m(1.0), [{Decimal, [:match_string]}])
-    ExMatch.match(Decimal.mult("0.5", 2), 1, opts)
-    ExMatch.match(%{a: 1}, %{a: ~m(1.0)}, opts)
-    ExMatch.match(%{a: 1}, %{a: Decimal.add("0.8", "0.2")}, opts)
-    ExMatch.match(%Decimal{coef: 11, exp: -1, sign: 1}, ~m(1.1))
-    ExMatch.match(%Decimal{..., coef: id(eleven)}, ~m(1.1))
-    ExMatch.match(%Decimal{coef: 11, exp: 1 - 1, sign: 1}, Decimal.add(1, 10))
-
-    # Decimal options must be a list
-    match_fails(
-      ExMatch.match(1, ~m(1.0), [{Decimal, :match_integer}]),
-      fn ex ->
-        assert ex =~
-                 ~r"^left:  1 =~\s*\*\* \(Protocol\.UndefinedError\) protocol Enumerable not implemented for :match_integer of type Atom\..*\nright: #Decimal<1\.0>"s
-      end
-    )
-
-    match_fails(
-      ExMatch.match(%Decimal{coef: 11, exp: -1, sign: 1}, ~m(11)),
-      """
-      left:  %Decimal{exp: -1}
-      right: %Decimal{exp: 0}
-      """
-    )
-
-    match_fails(
-      ExMatch.match(%Decimal{coef: ^eleven, exp: 1 - 1, sign: 1}, Decimal.add(1, eleven)),
-      """
-      left:  %Decimal{coef: ^eleven = 11}
-      right: %Decimal{coef: 12}
-      """
-    )
-
-    match_fails(
-      ExMatch.match(~m(1.1), nil),
-      """
-      left:  ~m(1.1) = #Decimal<1.1>
-      right: nil
-      """
-    )
-  end
-
   test "deep nested options" do
     ExMatch.match(
       %ExMatchTest.Dummy1{
@@ -497,6 +419,4 @@ defmodule ExMatchTest do
       """
     )
   end
-
-  defp id(value), do: value
 end

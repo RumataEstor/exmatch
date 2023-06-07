@@ -4,6 +4,8 @@ defmodule ExMatchTest.TestCase do
   using do
     quote do
       import ExMatchTest.TestCase
+
+      defp id(value), do: value
     end
   end
 
