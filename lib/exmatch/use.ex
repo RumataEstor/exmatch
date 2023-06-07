@@ -14,7 +14,7 @@ defmodule ExMatch.Use do
     opts =
       opts
       |> Keyword.get(:opts, [])
-      |> ExMatch.Options.parse()
+      |> ExMatch.Options.parse(caller)
 
     preface = remove_imports([{name, 1}], caller)
 

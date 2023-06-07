@@ -26,7 +26,7 @@ defimpl ExMatch.Pattern, for: Any do
   def value(self),
     do: self
 
-  def diff_values(left, right, opts, on_diff \\ nil) do
+  def diff_values(left_value, right, opts, on_diff \\ nil) do
     get_opts = fn atom ->
       try do
         opts
@@ -38,22 +38,14 @@ defimpl ExMatch.Pattern, for: Any do
       end
     end
 
-    try do
-      left_value = ExMatch.Pattern.value(left)
-      ExMatch.Value.diff(left_value, right, get_opts)
-    catch
-      kind, error ->
-        left_ast = ExMatch.Pattern.escape(left)
-        ex = ExMatch.Exception.new(kind, error, __STACKTRACE__)
-        {{:=~, [], [left_ast, ex]}, right}
-    else
+    case ExMatch.Value.diff(left_value, right, get_opts) do
       nil ->
         []
 
       {left_diff, right_diff} when on_diff == nil ->
         {Macro.escape(left_diff), right_diff}
 
-      diff ->
+      diff when is_function(on_diff, 1) ->
         on_diff.(diff)
     end
   end

@@ -20,7 +20,7 @@ defmodule ExMatch do
   end
 
   defmacro match(expr) do
-    gen_match(expr, quote(do: ExMatch.default_options()))
+    gen_match(expr, quote(do: ExMatch.default_options()), __CALLER__)
   end
 
   @doc """
@@ -28,36 +28,39 @@ defmodule ExMatch do
 
   iex> ExMatch.match([1, a, 3], [1, 2, 3])
   iex> 2 = a
+
+  iex> ExMatch.match([1, 2, a] == [1, 2, 3], ExMatch.options([]))
+  iex> 3 = a
   """
   defmacro match(arg1, arg2) do
-    gen_match(arg1, arg2)
+    gen_match(arg1, arg2, __CALLER__)
   end
 
   defmacro match(left, right, opts) do
-    gen_match(left, right, parse_options(opts))
+    gen_match(left, right, parse_options(opts, __CALLER__), __CALLER__)
   end
 
   defmacro options(item) do
-    parse_options(item)
+    parse_options(item, __CALLER__)
   end
 
-  defp parse_options(item) do
-    ExMatch.Options.parse(item)
+  defp parse_options(item, env) do
+    ExMatch.Options.parse(item, env)
   end
 
   def default_options() do
     options([])
   end
 
-  defp gen_match({:==, _, [left, right]}, opts) do
-    gen_match(left, right, opts)
+  defp gen_match({:==, _, [left, right]}, opts, env) do
+    gen_match(left, right, opts, env)
   end
 
-  defp gen_match({:=, _, [left, right]}, opts) do
-    gen_match(left, right, opts)
+  defp gen_match({:=, _, [left, right]}, opts, env) do
+    gen_match(left, right, opts, env)
   end
 
-  defp gen_match(arg1, arg2) do
+  defp gen_match(arg1, arg2, env) do
     right =
       quote do
         case unquote(arg2) do
@@ -69,12 +72,12 @@ defmodule ExMatch do
         end
       end
 
-    gen_match(arg1, right, quote(do: ExMatch.default_options()))
+    gen_match(arg1, right, quote(do: ExMatch.default_options()), env)
   end
 
-  def gen_match(left, right, opts_expr) do
+  def gen_match(left, right, opts_expr, env) do
     opts_var = Macro.var(:opts, __MODULE__)
-    parse_context = %ParseContext{opts: opts_var}
+    parse_context = %ParseContext{opts: opts_var, env: env}
     {bindings, left} = ParseContext.parse(left, parse_context)
 
     quote location: :keep do

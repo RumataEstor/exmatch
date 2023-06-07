@@ -51,7 +51,7 @@ defmodule ExMatch.Struct do
     {base_parsed, fields} =
       case fields do
         [{:|, _, [base, fields]}] ->
-          {[], base_parsed} = ExMatch.Expr.parse(base)
+          {[], base_parsed} = ExMatch.Expr.parse(base, parse_context)
           {base_parsed, fields}
 
         _ ->
@@ -173,12 +173,13 @@ defmodule ExMatch.Struct do
      escape(rstruct, nil, Enum.to_list(right_diff), true, nil)}
   end
 
-  def escape(module, base, fields, _partial, diff) do
+  def escape(module, base, fields, _partial, diff \\ nil) do
     base_info =
       case base do
-        %ExMatch.Expr{ast: base_expr, value: base_value} ->
+        %ExMatch.Expr{ast: base_expr} ->
           base_fields =
-            base_value
+            base
+            |> ExMatch.Pattern.value()
             |> Map.from_struct()
             |> Map.drop(Keyword.keys(fields))
             |> fields_in_diff(diff)

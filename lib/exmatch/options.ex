@@ -1,17 +1,17 @@
-alias ExMatch.ParseContext
-
 defmodule ExMatch.Options do
   @moduledoc false
+
+  alias ExMatch.ParseContext
 
   @enforce_keys [:opts]
   defstruct @enforce_keys
 
-  def parse({:%{}, _, items}) do
-    parse(items)
+  def parse({:%{}, _, items}, env) do
+    parse(items, env)
   end
 
-  def parse(items) when is_list(items) do
-    parse_context = %ParseContext{opts: Macro.escape(%{})}
+  def parse(items, env) when is_list(items) do
+    parse_context = %ParseContext{opts: Macro.escape(%{}), env: env}
 
     fields =
       Enum.map(items, fn
@@ -32,7 +32,7 @@ defmodule ExMatch.Options do
     end
   end
 
-  def parse(opts_expr) do
+  def parse(opts_expr, _env) do
     if Macro.quoted_literal?(opts_expr) do
       raise "Options argument must be a map or a list, got: #{Macro.to_string(opts_expr)}"
     end
