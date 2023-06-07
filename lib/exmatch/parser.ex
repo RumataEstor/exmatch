@@ -38,7 +38,7 @@ defmodule ExMatch.Parser do
     ExMatch.Struct.parse(left, parse_context)
   end
 
-  def parse_ast(left, _parse_context) do
-    ExMatch.Expr.parse(left)
+  def parse_ast(left, parse_context) do
+    ExMatch.Expr.parse(left, parse_context)
   end
 end
