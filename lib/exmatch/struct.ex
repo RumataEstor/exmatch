@@ -19,9 +19,10 @@ defmodule ExMatch.Struct do
       def diff(left, right, opts) do
         %WithValue{module: module, base: base, fields: fields, value: value} = left
 
-        ExMatch.Pattern.Any.diff_values(value, right, opts, fn _ ->
-          ExMatch.Struct.diff(module, base, fields, false, right, opts)
-        end)
+        case ExMatch.Pattern.diff(value, right, opts) do
+          [] -> []
+          _ -> ExMatch.Struct.diff(module, base, fields, false, right, opts)
+        end
       end
     end
   end
