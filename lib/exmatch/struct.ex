@@ -190,10 +190,11 @@ defmodule ExMatch.Struct do
           nil
       end
 
+      IO.inspect({fields, diff}, label: "fields, diff", structs: false)
+
     fields =
       fields
       |> fields_in_diff(diff)
-      |> ExMatch.Map.escape_fields()
 
     module = Macro.to_string(module)
 
@@ -230,6 +231,7 @@ defmodule ExMatch.Struct do
   defp render_fields([], tail), do: tail
 
   defp render_fields(fields, tail) do
+    IO.inspect(fields, label: "fields", structs: false)
     [[_ | tl1] | tl2] =
       for {key, value} <- fields do
         [", ", to_string(key), ": " | ExMatch.View.inspect(value)]

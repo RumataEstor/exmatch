@@ -68,7 +68,7 @@ defmodule ExMatch.Map do
 
         case ExMatch.Pattern.diff(field, right_value, opts) do
           {left_diff, right_diff} ->
-            left_diffs = [{ExMatch.Pattern.escape(key), left_diff} | left_diffs]
+            left_diffs = [{key, left_diff} | left_diffs]
             right_diffs = Map.put(right_diffs, key, right_diff)
             {bindings, left_diffs, right_diffs, right, opts}
 
@@ -78,10 +78,7 @@ defmodule ExMatch.Map do
         end
 
       _ ->
-        left_diff = {
-          ExMatch.Pattern.escape(key),
-          ExMatch.Pattern.escape(field)
-        }
+        left_diff = {key, ExMatch.Pattern.escape(field)        }
 
         left_diffs = [left_diff | left_diffs]
 
