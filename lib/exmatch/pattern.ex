@@ -1,4 +1,4 @@
-defprotocol ExMatch.Match do
+defprotocol ExMatch.Pattern do
   @moduledoc false
 
   @fallback_to_any true
@@ -13,7 +13,7 @@ defprotocol ExMatch.Match do
   def value(self)
 end
 
-defimpl ExMatch.Match, for: Any do
+defimpl ExMatch.Pattern, for: Any do
   @moduledoc false
 
   def diff(left, right, opts) do
@@ -31,7 +31,7 @@ defimpl ExMatch.Match, for: Any do
       try do
         opts
         |> Map.get(atom)
-        |> ExMatch.Match.value()
+        |> ExMatch.Pattern.value()
       rescue
         ArgumentError ->
           nil
@@ -39,11 +39,11 @@ defimpl ExMatch.Match, for: Any do
     end
 
     try do
-      left_value = ExMatch.Match.value(left)
+      left_value = ExMatch.Pattern.value(left)
       ExMatch.Value.diff(left_value, right, get_opts)
     catch
       kind, error ->
-        left_ast = ExMatch.Match.escape(left)
+        left_ast = ExMatch.Pattern.escape(left)
         ex = ExMatch.Exception.new(kind, error, __STACKTRACE__)
         {{:=~, [], [left_ast, ex]}, right}
     else

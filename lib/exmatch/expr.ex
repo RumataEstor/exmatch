@@ -48,13 +48,13 @@ defmodule ExMatch.Expr do
     {[], self}
   end
 
-  defimpl ExMatch.Match do
+  defimpl ExMatch.Pattern do
     @moduledoc false
 
     def diff(left, right, opts) do
       %ExMatch.Expr{ast: ast, value: value} = left
 
-      ExMatch.Match.Any.diff_values(value, right, opts, fn
+      ExMatch.Pattern.Any.diff_values(value, right, opts, fn
         {^value, right_diff} ->
           {escape(left), right_diff}
 
