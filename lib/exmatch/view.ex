@@ -35,7 +35,7 @@ defmodule ExMatch.View.Rendered do
     end
   end
 
-  defimpl ExMatch.Match do
+  defimpl ExMatch.Pattern do
     def escape(item), do: item
 
     def diff(item, _right, _opts),

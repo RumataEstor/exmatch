@@ -90,7 +90,7 @@ defmodule ExMatch do
         end
 
       unquote(bindings) =
-        case ExMatch.Match.diff(unquote(left), right, unquote(opts_var)) do
+        case ExMatch.Pattern.diff(unquote(left), right, unquote(opts_var)) do
           {diff_left, diff_right} = diff ->
             raise unquote(@assertion_error),
               left: diff_left,

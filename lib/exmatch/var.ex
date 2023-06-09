@@ -34,7 +34,7 @@ defmodule ExMatch.Var do
     {[{var, [generated: true] ++ meta, context}], self}
   end
 
-  defimpl ExMatch.Match do
+  defimpl ExMatch.Pattern do
     @moduledoc false
 
     def diff(%ExMatch.Var{binding: binding, expr: nil, expr_fun: nil}, right, _opts) do

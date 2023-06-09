@@ -35,7 +35,7 @@ defmodule ExMatch.List do
   defp diff([item | items], skipped, bindings, left_diffs, right_diffs, right, opts) do
     case right do
       [right_item | right] ->
-        case ExMatch.Match.diff(item, right_item, opts) do
+        case ExMatch.Pattern.diff(item, right_item, opts) do
           new_bindings when is_list(new_bindings) ->
             bindings = new_bindings ++ bindings
             diff(items, skipped + 1, bindings, left_diffs, right_diffs, right, opts)
@@ -63,14 +63,14 @@ defmodule ExMatch.List do
   end
 
   def escape_items(items) do
-    Enum.map(items, &ExMatch.Match.escape/1)
+    Enum.map(items, &ExMatch.Pattern.escape/1)
   end
 
   def value(items) do
-    Enum.map(items, &ExMatch.Match.value/1)
+    Enum.map(items, &ExMatch.Pattern.value/1)
   end
 
-  defimpl ExMatch.Match do
+  defimpl ExMatch.Pattern do
     @moduledoc false
 
     def diff(left, right, opts) when is_list(right) do

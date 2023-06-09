@@ -18,7 +18,7 @@ defmodule ExMatch.Tuple do
     {bindings, self}
   end
 
-  defimpl ExMatch.Match do
+  defimpl ExMatch.Pattern do
     @moduledoc false
 
     def diff(left, right, opts) when is_tuple(right) do
@@ -39,7 +39,7 @@ defmodule ExMatch.Tuple do
     end
 
     def escape(%ExMatch.Tuple{items: [i1, i2]}),
-      do: {ExMatch.Match.escape(i1), ExMatch.Match.escape(i2)}
+      do: {ExMatch.Pattern.escape(i1), ExMatch.Pattern.escape(i2)}
 
     def escape(%ExMatch.Tuple{items: items}),
       do: {:{}, [], ExMatch.List.escape_items(items)}

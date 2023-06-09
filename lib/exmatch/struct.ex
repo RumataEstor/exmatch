@@ -7,7 +7,7 @@ defmodule ExMatch.Struct do
     @enforce_keys [:module, :base, :fields, :value]
     defstruct @enforce_keys
 
-    defimpl ExMatch.Match do
+    defimpl ExMatch.Pattern do
       @moduledoc false
 
       def escape(%WithValue{module: module, base: base, fields: fields}),
@@ -19,7 +19,7 @@ defmodule ExMatch.Struct do
       def diff(left, right, opts) do
         %WithValue{module: module, base: base, fields: fields, value: value} = left
 
-        ExMatch.Match.Any.diff_values(value, right, opts, fn _ ->
+        ExMatch.Pattern.Any.diff_values(value, right, opts, fn _ ->
           ExMatch.Struct.diff(module, base, fields, false, right, opts)
         end)
       end
@@ -30,7 +30,7 @@ defmodule ExMatch.Struct do
     @enforce_keys [:module, :base, :fields, :partial]
     defstruct @enforce_keys
 
-    defimpl ExMatch.Match do
+    defimpl ExMatch.Pattern do
       @moduledoc false
 
       def escape(%NoValue{module: module, base: base, fields: fields, partial: partial}),
@@ -92,7 +92,7 @@ defmodule ExMatch.Struct do
     end
 
     {value, fields} =
-      case ExMatch.Match.value(base) do
+      case ExMatch.Pattern.value(base) do
         nil ->
           value = struct!(module, ExMatch.Map.field_values(fields))
 
@@ -116,7 +116,7 @@ defmodule ExMatch.Struct do
             partial: partial
           }
 
-          raise "The #{ExMatch.Match.escape(struct)} struct update syntax was called with #{inspect(value)} as a base"
+          raise "The #{ExMatch.Pattern.escape(struct)} struct update syntax was called with #{inspect(value)} as a base"
       end
 
     %WithValue{
@@ -139,7 +139,7 @@ defmodule ExMatch.Struct do
     all_fields =
       if base do
         base
-        |> ExMatch.Match.value()
+        |> ExMatch.Pattern.value()
         |> Map.from_struct()
         |> Map.drop(Keyword.keys(fields))
         |> Enum.concat(fields)

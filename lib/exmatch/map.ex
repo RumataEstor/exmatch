@@ -66,9 +66,9 @@ defmodule ExMatch.Map do
       %{^key => right_value} ->
         right = Map.delete(right, key)
 
-        case ExMatch.Match.diff(field, right_value, opts) do
+        case ExMatch.Pattern.diff(field, right_value, opts) do
           {left_diff, right_diff} ->
-            left_diffs = [{ExMatch.Match.escape(key), left_diff} | left_diffs]
+            left_diffs = [{ExMatch.Pattern.escape(key), left_diff} | left_diffs]
             right_diffs = Map.put(right_diffs, key, right_diff)
             {bindings, left_diffs, right_diffs, right, opts}
 
@@ -79,8 +79,8 @@ defmodule ExMatch.Map do
 
       _ ->
         left_diff = {
-          ExMatch.Match.escape(key),
-          ExMatch.Match.escape(field)
+          ExMatch.Pattern.escape(key),
+          ExMatch.Pattern.escape(field)
         }
 
         left_diffs = [left_diff | left_diffs]
@@ -92,8 +92,8 @@ defmodule ExMatch.Map do
   def field_values(fields) do
     Enum.map(fields, fn {key, value} ->
       {
-        ExMatch.Match.value(key),
-        ExMatch.Match.value(value)
+        ExMatch.Pattern.value(key),
+        ExMatch.Pattern.value(value)
       }
     end)
   end
@@ -101,13 +101,13 @@ defmodule ExMatch.Map do
   def escape_fields(fields) do
     Enum.map(fields, fn {key, value} ->
       {
-        ExMatch.Match.escape(key),
-        ExMatch.Match.escape(value)
+        ExMatch.Pattern.escape(key),
+        ExMatch.Pattern.escape(value)
       }
     end)
   end
 
-  defimpl ExMatch.Match do
+  defimpl ExMatch.Pattern do
     @moduledoc false
 
     def diff(left, right, opts) when is_map(right) do
