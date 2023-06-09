@@ -34,16 +34,6 @@ defmodule ExMatch.View.Rendered do
       iodata
     end
   end
-
-  defimpl ExMatch.Pattern do
-    def escape(item), do: item
-
-    def diff(item, _right, _opts),
-      do: raise("Must not diff rendered #{inspect(item, structs: false)}")
-
-    def value(item),
-      do: raise("Must not get value of rendered #{inspect(item, structs: false)}")
-  end
 end
 
 defimpl ExMatch.View, for: Any do
