@@ -40,7 +40,7 @@ defimpl ExMatch.Match, for: Any do
 
     try do
       left_value = ExMatch.Match.value(left)
-      ExMatch.Diff.diff(left_value, right, get_opts)
+      ExMatch.Value.diff(left_value, right, get_opts)
     catch
       kind, error ->
         left_ast = ExMatch.Match.escape(left)
