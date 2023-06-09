@@ -21,7 +21,7 @@ defimpl ExMatch.Pattern, for: Any do
   end
 
   def escape(self),
-    do: self
+    do: ExMatch.View.Rendered.new(inspect(self))
 
   def value(self),
     do: self
@@ -43,7 +43,7 @@ defimpl ExMatch.Pattern, for: Any do
         []
 
       {left_diff, right_diff} when on_diff == nil ->
-        {Macro.escape(left_diff), right_diff}
+        {ExMatch.Pattern.escape(left_diff), right_diff}
 
       diff when is_function(on_diff, 1) ->
         on_diff.(diff)
