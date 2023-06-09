@@ -52,25 +52,28 @@ defmodule ExMatch.Expr do
     @moduledoc false
 
     def diff(left, right, opts) do
-      %ExMatch.Expr{ast: ast, value: value} = left
+      %ExMatch.Expr{value: value} = left
 
       ExMatch.Pattern.Any.diff_values(value, right, opts, fn
         {^value, right_diff} ->
-          {escape(left), right_diff}
+          {escape(left, value, true), right_diff}
 
         {left_diff, right_diff} ->
-          left_diff = {:=~, [], [ast, Macro.escape(left_diff)]}
-          {left_diff, right_diff}
+          {escape(left, left_diff, false), right_diff}
       end)
     end
 
-    def escape(%ExMatch.Expr{ast: ast, value: value}) do
-      code = Macro.to_string(ast)
+    def escape(%ExMatch.Expr{value: value} = self),
+      do: escape(self, value, true)
 
-      if code == inspect(value) do
+    defp escape(%ExMatch.Expr{ast: ast}, value, exact?) do
+      value_str = inspect(value)
+
+      if Macro.to_string(ast) == value_str do
         ast
       else
-        {:=, [], [ast, value]}
+        op = if(exact?, do: :=, else: :=~)
+        {op, [], [ast, ExMatch.View.Rendered.new(value_str)]}
       end
     end
 

@@ -62,4 +62,16 @@ defmodule ExMatchTest.Tuple do
       """
     )
   end
+
+  test "expr containing a tuple of 3 elements" do
+    l = {1, 2, 4}
+
+    match_fails(
+      ExMatch.match(^l, {2, 4}),
+      """
+      left:  ^l = {1, 2, 4}
+      right: {2, 4}
+      """
+    )
+  end
 end
