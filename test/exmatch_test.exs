@@ -150,4 +150,24 @@ defmodule ExMatchTest do
       """
     )
   end
+
+  test "expressions matches" do
+    #f = fn -> 1 end
+    ExMatch.match(f(), 1)
+    ExMatch.match f() + 2 == 3
+    ExMatch.match {_, f()} == {1, 1}
+  end
+
+  test "expression crashes" do
+    match_fails(
+      ExMatch.match(g() + 2 == 3),
+      """
+      left:  (g() == false) + 2
+      right: 3
+      """
+    )
+  end
+
+  def f(), do: 1
+  def g(), do: false
 end
