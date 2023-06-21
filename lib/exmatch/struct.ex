@@ -38,7 +38,7 @@ defmodule ExMatch.Struct do
         do: ExMatch.Struct.escape(module, base, fields, partial)
 
       def value(%NoValue{}),
-        do: raise(ArgumentError, "This struct doesn't have value")
+        do: throw(ExMatch.NoValue)
 
       def diff(left, right, opts) do
         %NoValue{module: module, base: base, fields: fields, partial: partial} = left
@@ -89,7 +89,7 @@ defmodule ExMatch.Struct do
   defp new(module, base, fields, partial) do
     if partial do
       # caught below
-      raise ArgumentError
+      throw(ExMatch.NoValue)
     end
 
     {value, fields} =
@@ -126,8 +126,8 @@ defmodule ExMatch.Struct do
       fields: fields,
       value: value
     }
-  rescue
-    ArgumentError ->
+  catch
+    ExMatch.NoValue ->
       %NoValue{
         module: module,
         base: base,

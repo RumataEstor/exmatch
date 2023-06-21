@@ -10,7 +10,13 @@ defprotocol ExMatch.Pattern do
   def escape(self)
 
   @spec value(t) :: any
+  @doc """
+  May throw ExMatch.NoValue
+  """
   def value(self)
+end
+
+defmodule ExMatch.NoValue do
 end
 
 defimpl ExMatch.Pattern, for: Any do
@@ -32,8 +38,8 @@ defimpl ExMatch.Pattern, for: Any do
         opts
         |> Map.get(atom)
         |> ExMatch.Pattern.value()
-      rescue
-        ArgumentError ->
+      catch
+        ExMatch.NoValue ->
           nil
       end
     end

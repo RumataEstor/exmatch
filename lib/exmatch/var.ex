@@ -79,6 +79,6 @@ defmodule ExMatch.Var do
     end
 
     def value(_self),
-      do: raise(ArgumentError, "Bindings don't represent values")
+      do: throw(ExMatch.NoValue)
   end
 end
