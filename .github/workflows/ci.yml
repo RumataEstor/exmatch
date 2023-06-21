@@ -17,10 +17,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-        - elixir: '1.10'
-          otp: '21'
-        - elixir: '1.11'
-          otp: '22'
         - elixir: '1.12'
           otp: '23'
         - elixir: '1.13'
@@ -28,6 +24,18 @@ jobs:
           lint: true
         - elixir: '1.14'
           otp: '25'
+          lint: true
+        - elixir: '1.15'
+          otp: '26'
+          lint: true
+        - elixir: '1.16'
+          otp: '26'
+          lint: true
+        - elixir: '1.17'
+          otp: '27'
+          lint: true
+        - elixir: '1.18'
+          otp: '27'
           lint: true
     steps:
       - uses: actions/checkout@v2
