@@ -133,7 +133,7 @@ defmodule ExMatch.Map do
     end
 
     def value(%ExMatch.Map{partial: true}),
-      do: raise(ArgumentError, "partial map doesn't represent a value")
+      do: throw(ExMatch.NoValue)
 
     def value(%ExMatch.Map{fields: fields}),
       do: fields |> ExMatch.Map.field_values() |> Map.new()

@@ -80,8 +80,8 @@ defmodule ExMatch.Expr do
     def diff(%ExMatch.Expr{value: value} = left, right, opts) do
       try do
         ExMatch.Pattern.value(value)
-      rescue
-        ArgumentError ->
+      catch
+        ExMatch.NoValue ->
           diff_expanded(left, right, opts)
       else
         left_value ->
