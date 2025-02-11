@@ -122,7 +122,7 @@ defmodule ExMatchTest.Struct do
         }
       ),
       """
-      left:  %ExMatchTest.Dummy{c: %ExMatchTest.Dummy{a: _, b: 1}}
+      left:  %ExMatchTest.Dummy{c: %ExMatchTest.Dummy{b: 1, a: _}}
       right: %ExMatchTest.Dummy{c: 10}
       """
     )

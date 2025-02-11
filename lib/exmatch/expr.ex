@@ -54,7 +54,7 @@ defmodule ExMatch.Expr do
       end
 
     self =
-      quote location: :keep do
+      quote do
         %ExMatch.Expr{
           ast: unquote(Macro.escape(ast)),
           value: unquote(value)
@@ -96,13 +96,14 @@ defmodule ExMatch.Expr do
       do: escape(self, value, true)
 
     defp escape(%ExMatch.Expr{ast: ast}, value, exact?) do
-      value_str = inspect(value)
+      value_str = ExMatch.View.Any.inspect_value(value)
+      ast_str = Macro.to_string(ast)
 
-      if Macro.to_string(ast) == value_str do
-        ast
+      if ast_str == value_str do
+        ExMatch.View.Rendered.new(ast_str)
       else
-        op = if(exact?, do: :=, else: :=~)
-        {op, [], [ast, ExMatch.View.Rendered.new(value_str)]}
+        op = if exact?, do: " = ", else: " =~ "
+        ExMatch.View.Rendered.new([ast_str, op, value_str])
       end
     end
 

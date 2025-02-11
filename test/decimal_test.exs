@@ -19,7 +19,7 @@ defmodule ExMatchTest.Decimal do
   test "Decimal options must be a list" do
     assert_raise(
       Protocol.UndefinedError,
-      ~r"^protocol Enumerable not implemented for :match_integer of type Atom.",
+      ~r"^protocol Enumerable not implemented for (type Atom\. This protocol is implemented for the following type\(s\): .*[ \n]*Got value:[ \n]*:match_integer|:match_integer of type Atom\.)",
       fn -> ExMatch.match(1, ~m(1.0), [{Decimal, :match_integer}]) end
     )
   end
@@ -50,9 +50,11 @@ defmodule ExMatchTest.Decimal do
     match_fails(
       ExMatch.match(~m(1.1), nil),
       """
-      left:  ~m(1.1) = #Decimal<1.1>
+      left:  ~m(1.1) = #{inspect_decimal(1.1)}
       right: nil
       """
     )
   end
+
+  defp inspect_decimal(value), do: inspect(Decimal.new(to_string(value)))
 end

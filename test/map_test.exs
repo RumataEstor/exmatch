@@ -93,7 +93,7 @@ defmodule ExMatchTest.Map do
         @map
       ),
       """
-      left:  %{d: ExMatchTest.Dummy.id(eleven + two) = 13, x: _, y: 6}
+      left:  %{x: _, y: 6, d: ExMatchTest.Dummy.id(eleven + two) = 13}
       right: %{d: %{e: 11, f: 12}, b: 2}
       """
     )
