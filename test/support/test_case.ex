@@ -22,27 +22,22 @@ defmodule ExMatchTest.TestCase do
   end
 
   defmacro match_fails(expr, expected_message) do
-    quote do
-      result =
+    quote generated: true do
+      message =
         try do
-          unquote(expr)
-          :ok
+          _ = unquote(expr)
+          raise ExUnit.AssertionError, "expected to raise but returned successfully"
         rescue
-          error in ExMatchTest.AssertionError ->
-            error
+          error in ExMatchTest.AssertionError -> Exception.message(error)
         end
 
-      if result == :ok do
-        raise ExUnit.AssertionError, "expected to raise but returned successfully"
-      end
+      case unquote(expected_message) do
+        expected_message when is_binary(expected_message) ->
+          expected_message = String.trim_trailing(expected_message)
+          assert expected_message == message
 
-      expected_message = unquote(expected_message)
-
-      if is_binary(expected_message) do
-        expected_message = String.trim_trailing(expected_message)
-        assert expected_message == Exception.message(result)
-      else
-        expected_message.(Exception.message(result))
+        expected_message when is_function(expected_message) ->
+          expected_message.(message)
       end
     end
   end
@@ -86,8 +81,10 @@ defmodule ExMatchTest.CLIFormatter do
       get_terminal_width(),
       &formatter(&1, &2, %{colors: [enabled: false]})
     )
-    |> String.replace_leading("  0)  (ExMatchTest.CLIFormatter)\n     :\n     ", "")
+    |> String.replace_leading("  0)  (ExMatchTest.CLIFormatter)", "")
     |> String.replace("\n     ", "\n")
+    |> String.replace_leading("\n:\n", "")
+    |> String.replace_leading("\n.:\n", "")
     |> String.trim_trailing()
   end
 

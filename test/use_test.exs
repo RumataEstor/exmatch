@@ -95,7 +95,7 @@ defmodule ExMatchTest.UseOptsValue do
     match_fails(
       exmatch(%ExMatchTest.Dummy{a: 1 + 1} == %Dummy{a: 1, b: {0, 1, 2, 3, 4}, c: 10}),
       """
-      left:  %ExMatchTest.Dummy{b: {1, ..2.., ExMatchTest.Dummy.id(3 + 1) = 4}, a: 1 + 1 = 2}
+      left:  %ExMatchTest.Dummy{a: 1 + 1 = 2, b: {1, ..2.., ExMatchTest.Dummy.id(3 + 1) = 4}}
       right: %ExMatchTest.Dummy{a: 1, b: {0, ..2.., 3, 4}, c: 10}
       """
     )

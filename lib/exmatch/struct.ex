@@ -81,7 +81,7 @@ defmodule ExMatch.Struct do
 
       %ExMatch.Map{} = opts ->
         partial = if(base, do: false, else: opts.partial || partial)
-        fields = Keyword.merge(opts.fields, fields)
+        fields = fields ++ Keyword.drop(opts.fields, Keyword.keys(fields))
         new(module, base, fields, partial)
     end
   end
@@ -136,17 +136,18 @@ defmodule ExMatch.Struct do
       }
   end
 
+  defp base_fields(nil, _fields), do: []
+
+  defp base_fields(base, fields) do
+    base
+    |> ExMatch.Pattern.value()
+    |> Map.from_struct()
+    |> Map.drop(Keyword.keys(fields))
+    |> Enum.sort()
+  end
+
   def diff(module, base, fields, partial, %rstruct{} = right, opts) do
-    all_fields =
-      if base do
-        base
-        |> ExMatch.Pattern.value()
-        |> Map.from_struct()
-        |> Map.drop(Keyword.keys(fields))
-        |> Enum.concat(fields)
-      else
-        fields
-      end
+    all_fields = fields ++ base_fields(base, fields)
 
     right_map = Map.from_struct(right)
 
@@ -156,7 +157,7 @@ defmodule ExMatch.Struct do
 
       _ when module != rstruct ->
         left_diff = []
-        right_diff = %{}
+        right_diff = []
         make_diff(module, base, fields, partial, right, left_diff, right_diff)
 
       bindings ->
@@ -169,8 +170,7 @@ defmodule ExMatch.Struct do
   end
 
   defp make_diff(module, base, fields, _partial, %rstruct{}, left_diff, right_diff) do
-    {escape(module, base, fields, true, left_diff),
-     escape(rstruct, nil, Enum.to_list(right_diff), true, nil)}
+    {escape(module, base, fields, true, left_diff), escape(rstruct, nil, right_diff, true, nil)}
   end
 
   def escape(module, base, fields, _partial, diff \\ nil) do
@@ -179,9 +179,7 @@ defmodule ExMatch.Struct do
         %ExMatch.Expr{ast: base_expr} ->
           base_fields =
             base
-            |> ExMatch.Pattern.value()
-            |> Map.from_struct()
-            |> Map.drop(Keyword.keys(fields))
+            |> base_fields(fields)
             |> fields_in_diff(diff)
 
           {base_expr, base_fields}
@@ -200,7 +198,7 @@ defmodule ExMatch.Struct do
     rendered =
       case base_info do
         nil ->
-          ["%", module, "{" | render_fields(fields, "}")]
+          ["%", module, "{" | ExMatch.Map.render_fields(fields, "}")]
 
         {base_expr, base_fields} when fields == [] ->
           [
@@ -208,7 +206,7 @@ defmodule ExMatch.Struct do
             " = %",
             module,
             "{"
-            | render_fields(base_fields, "}")
+            | ExMatch.Map.render_fields(base_fields, "}")
           ]
 
         {base_expr, base_fields} ->
@@ -220,27 +218,17 @@ defmodule ExMatch.Struct do
             " = %",
             module,
             "{"
-            | render_fields(base_fields, ["}) | " | render_fields(fields, "}")])
+            | ExMatch.Map.render_fields(base_fields, [
+                "}) | " | ExMatch.Map.render_fields(fields, "}")
+              ])
           ]
       end
 
     ExMatch.View.Rendered.new(rendered)
   end
 
-  defp render_fields([], tail), do: tail
+  defp fields_in_diff(fields, nil), do: fields
 
-  defp render_fields(fields, tail) do
-    [[_ | tl1] | tl2] =
-      for {key, value} <- fields do
-        [", ", to_string(key), ": " | ExMatch.View.inspect(value)]
-      end
-
-    [tl1, tl2 | tail]
-  end
-
-  defp fields_in_diff(fields, nil), do: Enum.to_list(fields)
-
-  defp fields_in_diff(fields, diff) do
-    Keyword.take(diff, Enum.map(fields, fn {key, _} -> key end))
-  end
+  defp fields_in_diff(fields, diff),
+    do: Keyword.take(diff, Keyword.keys(fields))
 end

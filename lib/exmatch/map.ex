@@ -34,6 +34,10 @@ defmodule ExMatch.Map do
     {true, bindings, parsed}
   end
 
+  defp parse_field({:..., _, []}, _partial, bindings, parsed, _parse_context) do
+    {true, bindings, parsed}
+  end
+
   defp parse_field({key, value}, partial, bindings, parsed, parse_context) do
     {value_bindings, value_parsed} = ParseContext.parse(value, parse_context)
     parsed = [{key, value_parsed} | parsed]
@@ -42,20 +46,16 @@ defmodule ExMatch.Map do
   end
 
   def diff_items(fields, right, partial, opts) do
-    case Enum.reduce(fields, {[], [], %{}, right, opts}, &diff_item/2) do
+    case Enum.reduce(fields, {[], [], [], right, opts}, &diff_item/2) do
       {bindings, [], right_diffs, right, _opts}
-      when right_diffs == %{} and (partial or right == %{}) ->
+      when right_diffs == [] and (partial or right == %{}) ->
         bindings
 
       {_bindings, left_diffs, right_diffs, right, _opts} ->
         left_diffs = Enum.reverse(left_diffs)
 
-        right_diffs =
-          if partial do
-            right_diffs
-          else
-            Map.merge(right_diffs, right)
-          end
+        right_tail = if partial, do: [], else: Enum.sort(right)
+        right_diffs = Enum.reverse(right_diffs, right_tail)
 
         {left_diffs, right_diffs}
     end
@@ -69,7 +69,7 @@ defmodule ExMatch.Map do
         case ExMatch.Pattern.diff(field, right_value, opts) do
           {left_diff, right_diff} ->
             left_diffs = [{ExMatch.Pattern.escape(key), left_diff} | left_diffs]
-            right_diffs = Map.put(right_diffs, key, right_diff)
+            right_diffs = [{key, right_diff} | right_diffs]
             {bindings, left_diffs, right_diffs, right, opts}
 
           new_bindings ->
@@ -107,6 +107,23 @@ defmodule ExMatch.Map do
     end)
   end
 
+  def render(fields) when is_list(fields),
+    do: ExMatch.View.Rendered.new(["%{" | ExMatch.Map.render_fields(fields, ["}"])])
+
+  def render(map) when is_map(map),
+    do: render(Enum.sort(map))
+
+  def render_fields([], tail), do: tail
+
+  def render_fields(fields, tail) do
+    fields
+    |> Enum.reverse()
+    |> Enum.reduce(tail, fn {key, value}, tail ->
+      [", ", to_string(key), ": ", ExMatch.View.inspect(value) | tail]
+    end)
+    |> tl()
+  end
+
   defimpl ExMatch.Pattern do
     @moduledoc false
 
@@ -115,7 +132,8 @@ defmodule ExMatch.Map do
 
       case ExMatch.Map.diff_items(fields, right, partial, opts) do
         {left_diffs, right_diffs} ->
-          left_diffs = {:%{}, [], left_diffs}
+          left_diffs = ExMatch.Map.render(left_diffs)
+          right_diffs = ExMatch.Map.render(right_diffs)
           {left_diffs, right_diffs}
 
         bindings ->

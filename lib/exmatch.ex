@@ -62,7 +62,7 @@ defmodule ExMatch do
 
   defp gen_match(arg1, arg2, env) do
     right =
-      quote do
+      quote generated: true do
         case unquote(arg2) do
           %ExMatch.Options{} ->
             raise "The pattern #{unquote(Macro.to_string(arg1))} is not yet supported"
@@ -80,7 +80,7 @@ defmodule ExMatch do
     parse_context = %ParseContext{opts: opts_var, env: env}
     {bindings, left} = ParseContext.parse(left, parse_context)
 
-    quote location: :keep do
+    quote location: :keep, generated: true do
       right = unquote(right)
 
       unquote(opts_var) =
@@ -94,7 +94,7 @@ defmodule ExMatch do
 
       unquote(bindings) =
         case ExMatch.Pattern.diff(unquote(left), right, unquote(opts_var)) do
-          {diff_left, diff_right} = diff ->
+          {diff_left, diff_right} ->
             raise unquote(@assertion_error),
               left: diff_left,
               right: diff_right,

@@ -36,8 +36,18 @@ defmodule ExMatch.View.Rendered do
   end
 end
 
+defimpl ExMatch.View, for: Map do
+  def inspect(map) do
+    ExMatch.View.Any.inspect_value(map)
+  end
+end
+
 defimpl ExMatch.View, for: Any do
   def inspect(ast) do
     Macro.to_string(ast)
+  end
+
+  def inspect_value(value) do
+    inspect(value, custom_options: [sort_maps: true])
   end
 end
